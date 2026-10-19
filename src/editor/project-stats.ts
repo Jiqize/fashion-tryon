@@ -45,6 +45,12 @@ async function countOutputs(root: string, skus: string[]): Promise<number> {
   return total
 }
 
+/** runId 是本地时间 YYYYMMDD-HHMMSS，转成 ISO */
+function runIdTime(runId: string): string {
+  const part = (start: number, length: number): number => Number(runId.slice(start, start + length))
+  return new Date(part(0, 4), part(4, 2) - 1, part(6, 2), part(9, 2), part(11, 2), part(13, 2)).toISOString()
+}
+
 export async function projectCard(entry: ProjectEntry): Promise<ProjectCard> {
   const card: ProjectCard = {
     id: entry.id,
@@ -67,7 +73,9 @@ export async function projectCard(entry: ProjectEntry): Promise<ProjectCard> {
   // listRunRecords 已按 runId 从新到旧
   const records = await listRunRecords(entry.root)
   for (const record of records) {
-    if (record.startedAt !== null && (card.lastRunAt === null || record.startedAt > card.lastRunAt)) card.lastRunAt = record.startedAt
+    // 旧格式记录（10 月中旬以前）没有 startedAt，用 runId 里的时间
+    const startedAt = record.startedAt ?? runIdTime(record.runId)
+    if (card.lastRunAt === null || startedAt > card.lastRunAt) card.lastRunAt = startedAt
   }
   outer: for (const record of records) {
     for (const group of record.groups) {

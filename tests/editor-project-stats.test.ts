@@ -100,6 +100,24 @@ describe('projectCard', () => {
     expect((await projectCard(entryFor(root))).cover).toBe('成图/EX1/old.png')
   })
 
+  it('takes the time of old-format run records from the runId', async () => {
+    await twoSkus()
+    await writeFixtureRealImage(root, '成图/EX1/a.png', 4)
+    // 旧格式：没有 schemaVersion、startedAt
+    const shots = [{ model: 'EX1/模特/m1.jpg', modelThumb: 'ref/m1.jpg', result: 'out/m1.png', delivered: '成图/EX1/a.png' }]
+    for (const runId of ['20261014-235435', '20261015-094752']) {
+      await mkdir(path.join(runsDir(root), runId), { recursive: true })
+      await writeFile(path.join(runsDir(root), runId, 'run.json'), JSON.stringify({ engine: 'codex', groups: [{ sku: 'EX1', references: [], prompt: 'p', shots }] }))
+    }
+    expect(await projectCard(entryFor(root))).toMatchObject({ lastRunAt: new Date(2026, 9, 15, 9, 47, 52).toISOString(), cover: '成图/EX1/a.png' })
+
+    // 新格式记录更新时以它为准
+    const item = record('20261017-090000', '2026-10-17T01:00:00.000Z', ['成图/EX1/a.png'])
+    await mkdir(item.runDir, { recursive: true })
+    await writeRunRecord(item)
+    expect((await projectCard(entryFor(root))).lastRunAt).toBe('2026-10-17T01:00:00.000Z')
+  })
+
   it('falls back to the first garment of the first sku, then to null', async () => {
     await twoSkus()
     expect((await projectCard(entryFor(root))).cover).toBe('EX1/服装/g1.jpg')
