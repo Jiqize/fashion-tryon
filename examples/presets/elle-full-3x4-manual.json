@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "kind": "fashion-tryon-safe-preset",
+  "name": "ELLE 全身 3:4 人工验收",
+  "values": {
+    "scope": "full",
+    "pairing": "pair",
+    "size": "3:4",
+    "reviewMode": "manual"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "fashion-tryon-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent-first local folder-driven fashion try-on runner",
+  "bin": {
+    "fashion-tryon": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "ui"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "install:launcher": "bash scripts/install-launcher.sh",
+    "package:colleague": "pnpm build && node scripts/create-colleague-package.mjs",
+    "scan:secrets": "node scripts/scan-secrets.mjs",
+    "test": "vitest run",
+    "test:paid": "vitest run tests/paid-e2e.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.33.4",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "commander": "^14.0.0",
+    "dotenv": "^17.0.0",
+    "sharp": "0.34.5",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "playwright": "1.58.0",
+    "tsdown": "^0.18.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.0.0"
+  }
+}

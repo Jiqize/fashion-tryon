@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Tryon Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 字体非阻塞加载：离线时退回系统字体 -->
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* app.css 加载前的底色，避免闪白 */
+  html, body { margin: 0; background: #1b1b1b; color: #ecebe7; }
+</style>
+<script>
+  // 静态文件同样要求 token：从页面地址取出后拼到样式与脚本地址上
+  (function () {
+    var token = encodeURIComponent(new URLSearchParams(location.search).get('token') || '')
+    var css = document.createElement('link')
+    css.rel = 'stylesheet'
+    css.href = '/ui/app.css?token=' + token
+    document.head.appendChild(css)
+    var js = document.createElement('script')
+    js.src = '/ui/app.js?token=' + token
+    js.async = false
+    document.head.appendChild(js)
+  })()
+</script>
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><b>Tryon Studio</b><span id="batchName"></span></div>
+  <div class="progress">
+    <div class="meter" id="meter"></div>
+    <div class="counts" id="counts"></div>
+  </div>
+  <div class="run" id="run" hidden></div>
+  <div class="meta" id="meta"></div>
+</header>
+
+<main class="layout">
+  <section class="board" id="scroll">
+    <div class="setup" id="setup" hidden></div>
+    <div id="board" aria-label="套 × 图"></div>
+  </section>
+  <aside class="insp" id="insp" aria-label="检视"></aside>
+</main>
+
+<footer class="keys">
+  <span><kbd>↑</kbd><kbd>↓</kbd> 换套</span>
+  <span><kbd>←</kbd><kbd>→</kbd> 换图</span>
+  <span><kbd>Enter</kbd> 整套通过</span>
+  <span><kbd>R</kbd> 重出</span>
+  <span><kbd>X</kbd> 不交付</span>
+  <span><kbd>1</kbd>–<kbd>4</kbd> 切版本</span>
+  <span><kbd>Space</kbd> 放大对照</span>
+  <span><kbd>E</kbd> 提示词</span>
+  <span><kbd>C</kbd> 裁切</span>
+  <span><kbd>⌘Z</kbd> 撤销</span>
+</footer>
+
+<div class="pop" id="pop" role="dialog" aria-label="重出">
+  <h4>重出这张 <span id="popWhat"></span></h4>
+  <div class="tags" id="tags"></div>
+  <input id="popNote" placeholder="补一句（可不填）" maxlength="200">
+  <div class="foot"><span><kbd>Enter</kbd> 确认重出</span><span><kbd>Tab</kbd> 写说明 · <kbd>Esc</kbd> 取消</span></div>
+</div>
+
+<div class="loupe" id="loupe" role="dialog" aria-label="三图对照"></div>
+<div class="crop" id="crop" role="dialog" aria-label="手动裁切"></div>
+<div class="toast" id="toast" role="status"></div>
+</body>
+</html>

@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>合集原型</title>
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--fg:#1d1c1a;--mut:#77736b;--line:#e3e0d9;--wire:#c9c5bc;--ok:#2f5d50;--err:#9a3b3b;--soft:#efede8}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#161614;--card:#1f1e1b;--fg:#ece9e2;--mut:#9a958a;--line:#34322d;--wire:#4a4740;--ok:#7fc0aa;--err:#e39a8f;--soft:#262521;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.55 -apple-system,"PingFang SC",sans-serif}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+.proto-note{background:var(--fg);color:var(--bg);font-size:12px;text-align:center;padding:5px 16px}
+
+/* 顶栏 */
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1600px;margin:auto;padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+.brand h1{font-size:20px;margin:0}
+.brand span{color:var(--mut);white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--card)}
+.seg button{border:0;background:none;padding:4px 14px;border-radius:6px;font-size:13px;color:var(--mut)}
+.seg button[aria-pressed=true]{background:var(--fg);color:var(--bg)}
+.spacer{flex:1}
+.search{width:160px;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--card);white-space:nowrap}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.chip a{color:inherit}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:4px 12px;font-size:13px;white-space:nowrap}
+.btn:hover{border-color:var(--fg)}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.sm{font-size:12px;padding:2px 9px}
+.btn.icon{padding:2px 7px}
+
+.wrap{max-width:1600px;margin:auto;padding:18px 16px 120px}
+
+/* 款头部（两种模式共用） */
+.head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.head .pick{width:16px;height:16px;accent-color:var(--fg)}
+.head .no{font:600 11px ui-monospace,Menlo,monospace;color:var(--mut);border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.head .sku{font-size:17px;font-weight:600}
+.head .cnt{color:var(--mut);font-size:12.5px}
+.head .tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:auto}
+.head select{border:1px solid var(--line);border-radius:7px;background:var(--card);padding:2px 6px;font-size:12.5px}
+.tog{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;border:1px solid var(--line);border-radius:7px;padding:2px 8px;background:var(--card);cursor:pointer}
+.tog input{accent-color:var(--fg);margin:0}
+.flag{font-size:11px;font-weight:600;color:var(--err)}
+.fold{border:0;background:none;color:var(--mut);font-size:14px;width:24px}
+
+/* ===== 放图模式 ===== */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.card.is-picked{border-color:var(--fg)}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:12px}
+@media (max-width:760px){.cols{grid-template-columns:minmax(0,1fr)}}
+.col{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg)}
+.col h3{margin:0 0 8px;font-size:13px;display:flex;align-items:center;gap:8px}
+.col h3 small{color:var(--mut);font-weight:400}
+.col h3 .btn{margin-left:auto}
+.tiles{display:flex;flex-wrap:wrap;gap:8px}
+.tile{position:relative;width:76px;flex:none}
+.tile img{width:76px;height:100px;object-fit:cover;border-radius:6px;display:block;background:var(--soft)}
+img{background:var(--soft)}
+.tile .cap{font-size:10.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .tag{position:absolute;left:4px;top:4px;font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:0 5px}
+.tile .tick{position:absolute;right:4px;top:4px;width:18px;height:18px;border-radius:50%;border:1px solid var(--line);background:var(--card);font-size:11px;line-height:16px;text-align:center;color:transparent}
+.tile.model{cursor:pointer}
+.tile.model img{opacity:.45;border:2px solid transparent}
+.tile.model.on img{opacity:1;border-color:var(--fg)}
+.tile.model.on .tick{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.tile .half{position:absolute;left:4px;bottom:20px;font-size:10px;background:var(--card);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.drop{width:76px;height:100px;border:1.5px dashed var(--wire);border-radius:6px;display:grid;place-items:center;text-align:center;color:var(--mut);font-size:11px;line-height:1.3;background:var(--card);flex:none}
+.drop:hover{border-color:var(--fg);color:var(--fg)}
+.drop.big{width:100%;height:130px;font-size:13px}
+.prog{margin-top:8px;font-size:12px;color:var(--mut)}
+.prog .bar{height:4px;border-radius:2px;background:var(--line);margin-top:4px;overflow:hidden}
+.prog .bar i{display:block;height:100%;background:var(--fg)}
+.outs{display:flex;align-items:center;gap:8px;margin-top:12px;overflow-x:auto;padding-bottom:2px}
+.outs .lab{font-size:12px;color:var(--mut);width:34px;flex:none}
+.out{position:relative;flex:none;border:0;padding:0;background:none}
+.out img{width:64px;height:86px;object-fit:cover;border-radius:6px;display:block}
+.out .v{position:absolute;right:3px;bottom:3px;font:600 10px ui-monospace,Menlo,monospace;color:#fff;background:rgba(0,0,0,.6);border-radius:3px;padding:0 4px}
+.out.gen{width:64px;height:86px;border:1px dashed var(--fg);border-radius:6px;display:grid;place-items:center;font-size:11px;color:var(--fg)}
+.note{color:var(--mut);font-size:12px}
+
+/* ===== 节点模式 ===== */
+.lane{margin-bottom:26px;border-top:2px solid var(--fg);padding-top:10px}
+.lane.dim{opacity:.6}
+.flow{display:flex;align-items:center;margin-top:12px;overflow-x:auto;padding-bottom:6px}
+.node{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;flex:none;position:relative}
+.node:hover{border-color:var(--wire)}
+.node.click{cursor:pointer}
+.node .lab{font-size:11px;color:var(--mut);margin:0 0 6px;display:flex;gap:6px;align-items:center}
+.node .lab b{color:var(--fg);font-weight:600}
+.wire{flex:none;width:26px;height:1px;background:var(--wire)}
+.g-grid{display:grid;grid-template-columns:repeat(3,48px);gap:5px}
+.g-grid img{width:48px;height:64px;object-fit:cover;border-radius:4px;display:block}
+.g-grid .more{width:48px;height:64px;border-radius:4px;background:var(--soft);display:grid;place-items:center;font-size:11px;color:var(--mut)}
+.set{width:190px}
+.set dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12.5px}
+.set dt{color:var(--mut)}.set dd{margin:0;font-weight:600}
+.set .edit{margin-top:8px;font-size:12px;color:var(--mut)}
+.rows{display:flex;flex-direction:column;gap:10px;border-left:1px solid var(--wire);padding-left:14px;flex:none}
+.row{display:flex;align-items:center}
+.row.off{opacity:.45}
+.mnode{width:92px;padding:6px;cursor:pointer}
+.mnode img{width:78px;height:104px;object-fit:cover;border-radius:5px;display:block}
+.mnode .cap{font-size:10.5px;color:var(--mut);margin-top:3px;display:flex;justify-content:space-between}
+.mnode .tick{position:absolute;right:9px;top:9px;width:18px;height:18px;border-radius:50%;background:var(--fg);color:var(--bg);font-size:11px;line-height:18px;text-align:center}
+.row.off .mnode .tick{background:var(--card);border:1px solid var(--line);color:transparent}
+.onode{display:flex;gap:6px;padding:6px;align-items:flex-end}
+.ver{position:relative;border:0;padding:0;background:none;text-align:left}
+.ver img{width:66px;height:88px;object-fit:cover;border-radius:5px;display:block;opacity:.55}
+.ver.latest img{width:78px;height:104px;opacity:1}
+.ver .v{font:600 10px ui-monospace,Menlo,monospace;color:var(--mut)}
+.ver.latest .v{color:var(--fg)}
+.ver .mark{position:absolute;left:3px;top:3px;font-size:10px;background:var(--err);color:#fff;border-radius:3px;padding:0 4px}
+.ph{width:78px;height:104px;border:1px dashed var(--line);border-radius:5px;display:grid;place-items:center;color:var(--mut);font-size:11.5px}
+.ph.gen{border-color:var(--fg);color:var(--fg)}
+.add-redo{align-self:center;margin-left:4px}
+.empty-flow{display:flex;gap:12px;margin-top:12px}
+
+/* 底栏 */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line)}
+.bar-in{max-width:1600px;margin:auto;padding:10px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font-size:13px}
+.bar select{border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:2px 6px}
+.bar .count b{font-size:15px}
+.redo-btn{position:relative}
+.redo-btn .n{display:inline-block;min-width:18px;height:18px;border-radius:9px;background:var(--err);color:#fff;font-size:11px;line-height:18px;text-align:center;margin-left:4px;padding:0 5px}
+
+/* 侧边编辑抽屉 */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);z-index:8;background:var(--card);border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(0,0,0,.08);padding:16px;overflow:auto;transform:translateX(100%);transition:transform .2s}
+.drawer.open{transform:none}
+.drawer h2{font-size:16px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+.drawer h2 .btn{margin-left:auto}
+.drawer h4{font-size:12.5px;margin:16px 0 6px;color:var(--mut);font-weight:500}
+.refs{display:flex;flex-wrap:wrap;gap:8px}
+.refs .tile{width:70px}.refs .tile img{width:70px;height:92px}
+.radios{display:flex;gap:14px;font-size:13px}
+.radios label{display:flex;gap:5px;align-items:center}
+textarea{width:100%;min-height:200px;font:12px/1.7 ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);color:var(--fg);resize:vertical}
+
+/* 弹层：对照、待重出 */
+.modal{position:fixed;inset:0;z-index:9;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal[hidden]{display:none}
+.box{background:var(--card);border-radius:12px;padding:14px;width:min(1100px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.box-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.box-head b{flex:1;min-width:0}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.pair figure{margin:0}.pair img{width:100%;max-height:70vh;object-fit:contain;background:var(--bg);border-radius:8px;display:block}
+.pair figcaption{font-size:12px;color:var(--mut);margin-top:4px}
+.vtabs{display:flex;gap:4px}
+.vtabs button{border:1px solid var(--line);background:var(--card);border-radius:6px;font:600 11px ui-monospace,Menlo,monospace;padding:2px 8px}
+.vtabs button[aria-pressed=true]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.redo-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.redo-list li{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px}
+.redo-list img{width:44px;height:58px;object-fit:cover;border-radius:4px}
+.redo-list .t{flex:1;min-width:0;font-size:13px}
+.redo-list .t small{display:block;color:var(--mut)}
+.redo-list input{width:100%;margin-top:3px;font-size:12px;border:1px solid var(--line);border-radius:5px;padding:2px 6px;background:var(--bg)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="proto-note">原型 · 数据是冒烟目录里的示例，按钮只演示交互，不会真的放图或出图（示例图片放在同目录 img/，不随仓库提交，缺图时显示灰块）</div>
+
+<header class="top"><div class="top-in">
+  <div class="brand"><h1>合集</h1><span>页面放图冒烟 · <span id="n-sku"></span> 款</span></div>
+  <div class="seg" role="group" aria-label="模式">
+    <button type="button" data-mode="place" aria-pressed="true">放图</button>
+    <button type="button" data-mode="node" aria-pressed="false">节点</button>
+  </div>
+  <div class="spacer"></div>
+  <input class="search" id="search" placeholder="搜索款号" aria-label="搜索款号">
+  <span class="chip"><span class="dot"></span>正在出图 3 / 4 · <a href="#">查看</a></span>
+  <button class="btn" type="button">刷新</button>
+  <button class="btn" type="button">新建款</button>
+</div></header>
+
+<main class="wrap" id="app"></main>
+
+<div class="bar"><div class="bar-in">
+  <span class="count">已选 <b id="b-sku">0</b> 款 · 出图 <b id="b-shots">0</b> 张</span>
+  <label>换装范围 <select><option>按各款设置</option><option>全部换整套</option><option>全部只换上衣</option></select></label>
+  <label class="tog"><input type="checkbox"> 全部保持画幅</label>
+  <label>引擎 <select><option>codex</option><option>apimart</option></select></label>
+  <span class="spacer"></span>
+  <button class="btn redo-btn" type="button" id="open-redo">待重出<span class="n" id="redo-n">0</span></button>
+  <button class="btn primary" type="button">出图</button>
+</div></div>
+
+<aside class="drawer" id="drawer" aria-label="编辑"></aside>
+
+<div class="modal" id="cmp" hidden><div class="box">
+  <div class="box-head"><b id="cmp-title"></b><span class="vtabs" id="cmp-v"></span>
+    <button class="btn" type="button" id="cmp-add">加入待重出</button>
+    <a class="btn" href="#">出图记录</a>
+    <button class="btn" type="button" data-close>关闭</button></div>
+  <div class="pair" id="cmp-body"></div>
+</div></div>
+
+<div class="modal" id="redo" hidden><div class="box" style="width:min(560px,100%)">
+  <div class="box-head"><b>待重出</b><button class="btn" type="button" data-close>关闭</button></div>
+  <ul class="redo-list" id="redo-list"></ul>
+  <p class="note">每张按原款的参考图和提示词重出；要改设置先点款上的「编辑」。</p>
+  <div><button class="btn primary" type="button">重出这 <span id="redo-n2">0</span> 张</button></div>
+</div></div>
+
+<script>
+const IMG = 'img/'
+const groups = [
+  { sku: '001-SANDRO拉链卫衣', picked: true, swap: '换整套', keep: false, edited: true,
+    garments: [1,2,3,4,5,6].map(i => ({ img: 'a-g' + i, name: 'img' + i + '.webp', crop: i <= 2 })),
+    models: [
+      { img: 'a-m1', name: '0 (1).jpg', on: true, half: false, outs: [{ v: 'v1', img: 'a-o1' }, { v: 'v2', img: 'a-o1-v2' }, { v: 'v3', img: 'a-o1-v3' }] },
+      { img: 'a-m2', name: '0 (2).jpg', on: true, half: false, outs: [{ v: 'v1', img: 'a-o2' }, { v: 'v2', img: 'a-o2-v2' }, { v: 'v3', img: 'a-o2-v3' }] },
+    ] },
+  { sku: '004-Maje开衫', picked: true, swap: '换整套', keep: true, edited: false, upload: { done: 2, total: 5 },
+    garments: [1,2,3,4,5].map(i => ({ img: 'b-g' + i, name: 'img' + i + '.webp', crop: false })),
+    models: [
+      { img: 'b-m1', name: '0 (1).jpg', on: false, half: false, outs: [{ v: 'v1', img: 'b-o1' }] },
+      { img: 'b-m2', name: '0 (2).jpg', on: true, half: true, outs: [{ v: 'v1', img: 'b-o2' }, { v: 'v2', gen: true }] },
+    ] },
+  { sku: '007-针织背心', picked: false, swap: '换整套', keep: false, edited: false, pending: true, garments: [], models: [] },
+]
+const redo = [{ g: 1, m: 1, v: 'v1', why: '腿部站姿' }]
+let mode = 'place'
+
+const $ = (s) => document.querySelector(s)
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+const img = (name) => IMG + name + '.jpg'
+const latest = (m) => m.outs.length ? m.outs[m.outs.length - 1] : null
+
+function head(g, i) {
+  const on = g.models.filter(m => m.on).length
+  return '<div class="head">' +
+    '<input type="checkbox" class="pick" data-pick="' + i + '"' + (g.picked ? ' checked' : '') + (g.pending ? ' disabled' : '') + ' aria-label="选这款出图">' +
+    '<span class="no">' + String(i + 1).padStart(2, '0') + '</span>' +
+    '<span class="sku">' + esc(g.sku) + '</span>' +
+    '<span class="cnt">' + (g.pending ? '新款，放图后写入文件夹' : '衣服 ' + g.garments.length + ' · 模特 ' + on + '/' + g.models.length) + '</span>' +
+    (g.pending ? '' : '<span class="tools">' +
+      '<select aria-label="搭配规则"><option>固定服装</option><option>固定模特</option><option>一对一</option></select>' +
+      '<select aria-label="换装范围"><option>' + g.swap + '</option><option>只换上衣</option></select>' +
+      '<label class="tog"><input type="checkbox"' + (g.keep ? ' checked' : '') + '> 保持画幅</label>' +
+      '<button class="btn sm" type="button" data-edit="' + i + '">编辑' + (g.edited ? ' <span class="flag">已改</span>' : '') + '</button>' +
+      '<button class="btn sm" type="button" data-pick-run="' + i + '">只出这款</button>' +
+      '<button class="fold" type="button" aria-label="折叠">▾</button></span>') +
+    '</div>'
+}
+
+// ---------- 放图模式：左衣服、右模特、下成图 ----------
+function placeCard(g, i) {
+  if (g.pending) {
+    return '<section class="card">' + head(g, i) + '<div class="cols">' +
+      '<div class="col"><h3>衣服 <small>要换上的服装参考图</small></h3><div class="drop big">拖入衣服图<br>或点击选择</div></div>' +
+      '<div class="col"><h3>模特 <small>要生成的模特照片</small></h3><div class="drop big">拖入模特图<br>或点击选择</div></div>' +
+      '</div></section>'
+  }
+  const garments = g.garments.map(f => '<div class="tile"><img src="' + img(f.img) + '" alt="">' +
+    (f.crop ? '<span class="tag">裁</span>' : '') + '<div class="cap">' + esc(f.name) + '</div></div>').join('')
+  const models = g.models.map((m, j) => '<div class="tile model' + (m.on ? ' on' : '') + '" data-model="' + i + ':' + j + '">' +
+    '<img src="' + img(m.img) + '" alt=""><span class="tick">✓</span>' + (m.half ? '<span class="half">半身</span>' : '') +
+    '<div class="cap">' + esc(m.name) + '</div></div>').join('')
+  const outs = g.models.map((m, j) => {
+    const o = latest(m)
+    if (!o) return ''
+    if (o.gen) return '<span class="out gen">生成中</span>'
+    return '<button class="out" type="button" data-cmp="' + i + ':' + j + '"><img src="' + img(o.img) + '" alt=""><span class="v">' + o.v + '</span></button>'
+  }).join('')
+  return '<section class="card' + (g.picked ? ' is-picked' : '') + '">' + head(g, i) +
+    '<div class="cols">' +
+    '<div class="col"><h3>衣服 <small>' + g.garments.length + ' 张 · 已裁 ' + g.garments.filter(f => f.crop).length + '</small><button class="btn sm" type="button">裁图</button></h3>' +
+    '<div class="tiles">' + garments + '<div class="drop">＋<br>拖入衣服</div></div></div>' +
+    '<div class="col"><h3>模特 <small>点图选中 · 已选 ' + g.models.filter(m => m.on).length + '/' + g.models.length + '</small></h3>' +
+    '<div class="tiles">' + models + '<div class="drop">＋<br>拖入模特</div></div>' +
+    (g.upload ? '<div class="prog">正在放入 ' + g.upload.done + ' / ' + g.upload.total + '<div class="bar"><i style="width:' + (g.upload.done / g.upload.total * 100) + '%"></i></div></div>' : '') +
+    '</div></div>' +
+    (outs ? '<div class="outs"><span class="lab">成图</span>' + outs + '</div>' : '') +
+    '</section>'
+}
+
+// ---------- 节点模式：衣服 → 设置 → 每张模特 → 成图版本 ----------
+function lane(g, i) {
+  if (g.pending) {
+    return '<section class="lane">' + head(g, i) + '<div class="empty-flow"><div class="drop big" style="width:220px">拖入衣服图</div><div class="drop big" style="width:220px">拖入模特图</div></div></section>'
+  }
+  const shown = g.garments.slice(0, 5).map(f => '<img src="' + img(f.img) + '" alt="">').join('') +
+    (g.garments.length > 5 ? '<span class="more">+' + (g.garments.length - 5) + '</span>' : '')
+  const rows = g.models.map((m, j) => {
+    const versions = m.outs.map((o, k) => {
+      const isLatest = k === m.outs.length - 1
+      if (o.gen) return '<span class="ph gen">生成中</span>'
+      const marked = redo.some(r => r.g === i && r.m === j && r.v === o.v)
+      return '<button class="ver' + (isLatest ? ' latest' : '') + '" type="button" data-cmp="' + i + ':' + j + ':' + k + '">' +
+        '<img src="' + img(o.img) + '" alt="">' + (marked ? '<span class="mark">待重出</span>' : '') + '<span class="v">' + o.v + '</span></button>'
+    }).join('') || '<span class="ph">未出图</span>'
+    return '<div class="row' + (m.on ? '' : ' off') + '">' +
+      '<div class="node mnode" data-model="' + i + ':' + j + '"><img src="' + img(m.img) + '" alt=""><span class="tick">✓</span>' +
+      '<div class="cap"><span>' + esc(m.name) + '</span>' + (m.half ? '<span>半身</span>' : '') + '</div></div>' +
+      '<span class="wire"></span><div class="node onode">' + versions +
+      '<button class="btn sm add-redo" type="button" data-redo="' + i + ':' + j + '" aria-label="加入待重出">＋待重出</button></div></div>'
+  }).join('')
+  return '<section class="lane">' + head(g, i) +
+    '<div class="flow">' +
+    '<div class="node click" data-edit="' + i + '"><p class="lab">衣服 <b>' + g.garments.length + '</b> · 拖图到这里加入</p><div class="g-grid">' + shown + '</div></div>' +
+    '<span class="wire"></span>' +
+    '<div class="node set click" data-edit="' + i + '"><p class="lab">设置</p><dl>' +
+      '<dt>范围</dt><dd>' + g.swap + '</dd>' +
+      '<dt>参考图</dt><dd>' + Math.min(6, g.garments.length) + ' 张' + (g.garments.some(f => f.crop) ? '（含裁图）' : '') + '</dd>' +
+      '<dt>提示词</dt><dd>' + (g.edited ? '已改' : '默认') + '</dd>' +
+      '<dt>画幅</dt><dd>' + (g.keep ? '保持，不补画' : '默认') + '</dd></dl>' +
+      '<div class="edit">点击编辑 →</div></div>' +
+    '<span class="wire"></span>' +
+    '<div class="rows">' + rows + '</div>' +
+    '</div></section>'
+}
+
+function render() {
+  const q = $('#search').value.trim().toLowerCase()
+  const list = groups.map((g, i) => [g, i]).filter(([g]) => !q || g.sku.toLowerCase().includes(q))
+  $('#app').innerHTML = list.map(([g, i]) => mode === 'place' ? placeCard(g, i) : lane(g, i)).join('') +
+    '<p class="note">' + (mode === 'place' ? '拖图进左右两栏放入素材；勾选款后点底部「出图」。切到「节点」看每张模特的成图版本。' : '点「衣服」或「设置」节点编辑这款；点模特切换出不出；点成图对照原模特图。') + '</p>'
+  $('#n-sku').textContent = groups.length
+  const picked = groups.filter(g => g.picked)
+  $('#b-sku').textContent = picked.length
+  $('#b-shots').textContent = picked.reduce((n, g) => n + g.models.filter(m => m.on).length, 0)
+  $('#redo-n').textContent = redo.length
+}
+
+function openDrawer(i) {
+  const g = groups[i]
+  const refs = g.garments.slice(0, 6).map((f, k) => '<div class="tile"><img src="' + img(f.img) + '" alt=""><span class="tag">' + (k + 1) + '</span><div class="cap">' + esc(f.name) + '</div></div>').join('')
+  $('#drawer').innerHTML = '<h2>编辑 · ' + esc(g.sku) + '<button class="btn sm" type="button" data-close-drawer>关闭</button></h2>' +
+    '<p class="note">改完直接关掉，出图时按这里的设置。</p>' +
+    '<h4>参考图（拖动排序，拖出移除）</h4><div class="refs">' + refs + '</div>' +
+    '<h4>搭配规则</h4><div class="radios"><label><input type="radio" name="pr" checked> 固定服装</label><label><input type="radio" name="pr"> 固定模特</label><label><input type="radio" name="pr"> 一对一</label></div>' +
+    '<h4>换装范围</h4><div class="radios"><label><input type="radio" name="sw" checked> 换整套</label><label><input type="radio" name="sw"> 只换上衣</label></div>' +
+    '<h4>画幅</h4><label class="tog"><input type="checkbox"' + (g.keep ? ' checked' : '') + '> 保持图1画幅，不补画被截掉的部位</label>' +
+    '<h4>提示词 ' + (g.edited ? '<span class="flag">已改</span>' : '') + '</h4><textarea>图1是底图：一位模特在场景里的照片。人物、姿势、背景、构图和光线都以图1为准。\n图2到图' + (Math.min(6, g.garments.length) + 1) + '是同一套服装的参考图……</textarea>' +
+    '<p><button class="btn" type="button">恢复默认</button></p>'
+  $('#drawer').classList.add('open')
+}
+
+let cmp = null
+function openCmp(i, j, k) {
+  const m = groups[i].models[j]
+  const outs = m.outs.filter(o => !o.gen)
+  if (k === undefined || k >= outs.length) k = outs.length - 1
+  cmp = { i, j, k }
+  const o = outs[k]
+  $('#cmp-title').textContent = groups[i].sku + ' · ' + m.name
+  $('#cmp-v').innerHTML = outs.map((x, n) => '<button type="button" data-v="' + n + '" aria-pressed="' + (n === k) + '">' + x.v + '</button>').join('')
+  $('#cmp-body').innerHTML = '<figure><img src="' + img(m.img) + '" alt=""><figcaption>原模特图 · ' + esc(m.name) + '</figcaption></figure>' +
+    '<figure><img src="' + img(o.img) + '" alt=""><figcaption>成图 ' + o.v + '</figcaption></figure>'
+  $('#cmp').hidden = false
+}
+
+function addRedo(i, j, v) {
+  const m = groups[i].models[j]
+  v = v || (m.outs.filter(o => !o.gen).slice(-1)[0] || {}).v
+  if (!v || redo.some(r => r.g === i && r.m === j && r.v === v)) return
+  redo.push({ g: i, m: j, v, why: '' })
+  render()
+}
+
+function openRedo() {
+  $('#redo-list').innerHTML = redo.map((r, n) => {
+    const m = groups[r.g].models[r.m]
+    const o = m.outs.find(x => x.v === r.v)
+    return '<li><img src="' + img(o.img) + '" alt=""><div class="t">' + esc(groups[r.g].sku) + ' · ' + esc(m.name) + ' <small>' + r.v + '</small>' +
+      '<input placeholder="备注（选填，写进提示词末尾）" value="' + esc(r.why) + '"></div><button class="btn icon" type="button" data-del="' + n + '" aria-label="移出">×</button></li>'
+  }).join('') || '<li class="note">还没有。在成图上点「＋待重出」或在对照里点「加入待重出」。</li>'
+  $('#redo-n2').textContent = redo.length
+  $('#redo').hidden = false
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button,[data-model],[data-edit],[data-cmp],.modal')
+  if (!t) return
+  if (t.dataset.mode) {
+    mode = t.dataset.mode
+    document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)))
+    render()
+  } else if (t.dataset.model) {
+    const [i, j] = t.dataset.model.split(':').map(Number)
+    groups[i].models[j].on = !groups[i].models[j].on
+    render()
+  } else if (t.dataset.edit) openDrawer(Number(t.dataset.edit))
+  else if (t.dataset.cmp) {
+    const [i, j, k] = t.dataset.cmp.split(':').map(Number)
+    openCmp(i, j, k)
+  } else if (t.dataset.v) openCmp(cmp.i, cmp.j, Number(t.dataset.v))
+  else if (t.id === 'cmp-add') { const o = groups[cmp.i].models[cmp.j].outs.filter(x => !x.gen)[cmp.k]; addRedo(cmp.i, cmp.j, o.v); $('#cmp').hidden = true }
+  else if (t.dataset.redo) { const [i, j] = t.dataset.redo.split(':').map(Number); addRedo(i, j) }
+  else if (t.id === 'open-redo') openRedo()
+  else if (t.dataset.del) { redo.splice(Number(t.dataset.del), 1); render(); openRedo() }
+  else if (t.dataset.closeDrawer !== undefined) $('#drawer').classList.remove('open')
+  else if (t.dataset.close !== undefined || t.classList.contains('modal') && e.target === t) t.closest('.modal').hidden = true
+})
+document.addEventListener('change', (e) => {
+  if (e.target.dataset.pick) { groups[Number(e.target.dataset.pick)].picked = e.target.checked; render() }
+})
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return
+  document.querySelectorAll('.modal').forEach(m => { m.hidden = true })
+  $('#drawer').classList.remove('open')
+})
+$('#search').addEventListener('input', render)
+render()
+</script>
+</body>
+</html>

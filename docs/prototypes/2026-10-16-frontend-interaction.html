@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>交互升级原型</title>
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--fg:#1d1c1a;--mut:#77736b;--line:#e3e0d9;--wire:#c9c5bc;--ok:#2f5d50;--err:#9a3b3b;--warn:#a26a12;--soft:#efede8;--ease:cubic-bezier(.2,.82,.22,1);--tile:84px;--shadow:0 10px 30px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.06)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#161614;--card:#1f1e1b;--fg:#ece9e2;--mut:#9a958a;--line:#34322d;--wire:#4a4740;--ok:#7fc0aa;--err:#e39a8f;--warn:#e0b35c;--soft:#262521;--shadow:0 10px 30px rgba(0,0,0,.5);color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.55 -apple-system,"PingFang SC",sans-serif;-webkit-font-smoothing:antialiased}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid color-mix(in srgb,var(--fg) 70%,transparent);outline-offset:2px;border-radius:6px}
+.proto-note{background:var(--fg);color:var(--bg);font-size:12px;text-align:center;padding:5px 16px}
+.proto-note kbd{font:inherit;border:1px solid color-mix(in srgb,var(--bg) 40%,transparent);border-radius:4px;padding:0 4px;margin:0 1px}
+
+/* 通用按钮 */
+.btn{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:4px 12px;font-size:13px;white-space:nowrap;transition:border-color .2s var(--ease),transform .12s var(--ease),background .2s var(--ease)}
+.btn:hover{border-color:var(--fg)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.sm{font-size:12px;padding:2px 9px}
+.btn.ghost{border-color:transparent;background:none}
+.btn.ghost:hover{background:var(--soft)}
+.btn.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--line))}
+.btn:disabled{opacity:.45;cursor:default;transform:none}
+
+/* 分段控件 */
+.seg{display:inline-flex;position:relative;border-radius:8px;padding:2px;background:var(--soft);gap:2px}
+.seg button{position:relative;z-index:1;border:0;background:none;padding:3px 11px;border-radius:6px;font-size:12.5px;color:var(--mut);display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:color .2s var(--ease),background .25s var(--ease),box-shadow .25s var(--ease)}
+.seg button:hover{color:var(--fg)}
+.seg button[aria-checked=true]{background:var(--card);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.06);font-weight:500}
+.seg.dark button[aria-checked=true]{background:var(--fg);color:var(--bg)}
+.seg svg{width:13px;height:13px;flex:none}
+
+/* 开关 */
+.sw{display:inline-flex;align-items:center;gap:7px;border:0;background:none;padding:2px 0;font-size:12.5px;color:var(--fg)}
+.sw i{position:relative;width:30px;height:18px;border-radius:9px;background:var(--wire);transition:background .25s var(--ease);flex:none}
+.sw i::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .25s var(--ease)}
+.sw[aria-checked=true] i{background:var(--ok)}
+.sw[aria-checked=true] i::after{transform:translateX(12px)}
+
+/* 顶栏 */
+.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1600px;margin:auto;padding:10px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+.brand h1{font-size:19px;margin:0}
+.brand span{color:var(--mut);font-size:13px;white-space:nowrap}
+.brand a{color:var(--mut)}
+.spacer{flex:1}
+.search{position:relative}
+.search input{width:180px;padding:4px 10px 4px 26px;border:1px solid var(--line);border-radius:8px;background:var(--card);transition:width .3s var(--ease),border-color .2s}
+.search input:focus{width:240px;border-color:var(--fg);outline:none}
+.search svg{position:absolute;left:8px;top:50%;width:13px;height:13px;transform:translateY(-50%);color:var(--mut)}
+.search kbd{position:absolute;right:7px;top:50%;transform:translateY(-50%);font:11px -apple-system,sans-serif;color:var(--mut);border:1px solid var(--line);border-radius:4px;padding:0 4px;pointer-events:none}
+.search input:focus + kbd{display:none}
+.size{display:flex;align-items:center;gap:6px;color:var(--mut)}
+.size svg{width:12px;height:12px}
+.size svg.big{width:16px;height:16px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:96px;height:4px;border-radius:2px;background:var(--line);margin:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--card);border:.5px solid rgba(0,0,0,.2);box-shadow:0 1px 3px rgba(0,0,0,.3);cursor:grab}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--card);border:.5px solid rgba(0,0,0,.2);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.newsku{display:flex;gap:6px}
+.newsku input{width:120px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+
+.wrap{max-width:1600px;margin:auto;padding:18px 16px 130px}
+
+/* 款 */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px 14px;margin-bottom:14px;transition:border-color .2s var(--ease),box-shadow .25s var(--ease),opacity .2s}
+.card.is-picked{border-color:var(--fg)}
+.card.dragging{opacity:.4}
+.card.drop-before{box-shadow:0 -3px 0 0 var(--fg)}
+.card.drop-after{box-shadow:0 3px 0 0 var(--fg)}
+.head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.pick{appearance:none;width:17px;height:17px;border:1.5px solid var(--wire);border-radius:5px;background:var(--card);display:grid;place-items:center;margin:0;cursor:pointer;transition:background .2s var(--ease),border-color .2s}
+.pick:checked{background:var(--fg);border-color:var(--fg)}
+.pick:checked::after{content:"";width:5px;height:9px;border:solid var(--bg);border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg)}
+.no{font:600 11px ui-monospace,Menlo,monospace;color:var(--mut);border:1px solid var(--line);border-radius:5px;padding:1px 6px;cursor:grab;user-select:none}
+.no:active{cursor:grabbing}
+.sku{font-size:16.5px;font-weight:600}
+.cnt{color:var(--mut);font-size:12.5px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.state{font-size:12px;border-radius:7px;padding:3px 10px}
+.state b{font-weight:500;color:var(--mut)}
+.state.stale{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,var(--line))}
+.more{border:0;background:none;width:26px;height:24px;border-radius:6px;color:var(--mut);font-size:15px;line-height:1}
+.more:hover{background:var(--soft);color:var(--fg)}
+.summary{color:var(--mut);font-size:12.5px;margin:6px 0 0 30px}
+.body{display:grid;grid-template-rows:1fr;transition:grid-template-rows .35s var(--ease)}
+.card.folded .body{grid-template-rows:0fr}
+.body > div{overflow:hidden}
+
+/* 放图 */
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:12px}
+@media (max-width:760px){.cols{grid-template-columns:minmax(0,1fr)}}
+.col{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg);transition:border-color .25s var(--ease),background .25s var(--ease),transform .25s var(--ease),box-shadow .25s var(--ease)}
+.col.over{border-color:var(--fg);border-style:dashed;background:color-mix(in srgb,var(--soft) 70%,var(--card));transform:translateY(-2px);box-shadow:var(--shadow)}
+.col h3{margin:0 0 8px;font-size:13px;display:flex;align-items:center;gap:8px}
+.col h3 small{color:var(--mut);font-weight:400}
+.col h3 .q{margin-left:auto;font-size:11.5px;color:var(--warn);font-weight:500}
+.tiles{display:flex;flex-wrap:wrap;gap:8px}
+.tile{position:relative;width:var(--tile);flex:none;border-radius:7px}
+.tile .ph{position:relative;width:var(--tile);height:calc(var(--tile)*1.32);border-radius:7px;overflow:hidden;background:var(--soft)}
+.tile img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s var(--ease),opacity .25s var(--ease)}
+.tile:hover img{transform:scale(1.04)}
+.tile .cap{font-size:10.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.tile.focus .ph{outline:2px solid var(--fg);outline-offset:2px}
+.tile .tag{position:absolute;left:5px;top:5px;font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:0 5px}
+.tile .tick{position:absolute;right:5px;top:5px;width:19px;height:19px;border-radius:50%;border:1.5px solid rgba(255,255,255,.9);background:rgba(0,0,0,.18);display:grid;place-items:center;transition:background .2s var(--ease),transform .2s var(--ease)}
+.tile.sel .tick{background:var(--fg);border-color:var(--fg)}
+.tile.sel .tick::after{content:"";width:4px;height:8px;border:solid var(--bg);border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg)}
+.tile.selectable{cursor:pointer}
+.tile.selectable:not(.sel) img{opacity:.42}
+.tile .acts{position:absolute;left:0;right:0;bottom:0;display:flex;gap:4px;justify-content:center;padding:18px 4px 5px;background:linear-gradient(transparent,rgba(0,0,0,.55));transform:translateY(100%);transition:transform .3s var(--ease)}
+.tile:hover .acts,.tile:focus-within .acts{transform:none}
+.tile .acts button{border:0;border-radius:5px;background:rgba(255,255,255,.92);color:#1d1c1a;font-size:10.5px;padding:1px 6px}
+.tile .halfmark{position:absolute;left:5px;bottom:5px;font-size:10px;font-weight:600;background:var(--warn);color:#fff;border-radius:4px;padding:0 5px;transition:opacity .2s}
+.tile:hover .halfmark{opacity:0}
+.add{width:var(--tile);height:calc(var(--tile)*1.32);border:1.5px dashed var(--wire);border-radius:7px;display:grid;place-items:center;color:var(--mut);font-size:22px;background:var(--card);flex:none;transition:border-color .2s,color .2s}
+.add:hover{border-color:var(--fg);color:var(--fg)}
+.outs{display:flex;align-items:flex-start;gap:10px;margin-top:12px;overflow-x:auto;padding-bottom:4px}
+.outs .lab{font-size:12px;color:var(--mut);width:34px;flex:none;padding-top:4px}
+.outs .tile{--tile:72px}
+.outs .tile .ver{position:absolute;right:5px;bottom:5px;font:600 10px ui-monospace,Menlo,monospace;background:rgba(0,0,0,.6);color:#fff;border-radius:4px;padding:0 4px}
+.outs .tile .redo{position:absolute;left:5px;top:5px;font-size:10px;background:var(--warn);color:#fff;border-radius:4px;padding:0 4px}
+
+/* 节点 */
+.graph{display:flex;align-items:stretch;gap:0;margin-top:12px;overflow-x:auto;padding-bottom:4px}
+.node{border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:10px;flex:none}
+.node h4{margin:0 0 6px;font-size:12px;color:var(--mut);font-weight:500}
+.wire{width:28px;flex:none;position:relative}
+.wire::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1.5px solid var(--wire)}
+.nset{display:grid;gap:8px;min-width:250px}
+.nset .row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px}
+.nset .row > span{color:var(--mut)}
+.lanes{display:grid;gap:8px}
+.lane{display:flex;align-items:center;gap:0}
+.lane .tile{--tile:64px}
+.nver{display:flex;gap:6px}
+
+/* 底栏 */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--card) 85%,transparent);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-top:1px solid var(--line)}
+.bar-in{max-width:1600px;margin:auto;padding:10px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.bar .count{font-size:13px}
+.bar .count b{font-size:15px}
+.bar label{font-size:12px;color:var(--mut);display:inline-flex;align-items:center;gap:6px}
+.go{position:relative;min-width:132px;overflow:hidden;padding:6px 16px;font-weight:600}
+.go .pbar{position:absolute;left:0;bottom:0;height:3px;background:color-mix(in srgb,var(--bg) 70%,transparent);transition:width .3s linear}
+.badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--warn);color:#fff;font-size:11px;font-weight:600;text-align:center;margin-left:4px}
+.badge.zero{background:var(--wire)}
+
+/* 侧面板（抽屉 / 待重出） */
+.side{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);z-index:40;background:var(--card);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(105%);transition:transform .38s var(--ease);display:flex;flex-direction:column}
+.side.open{transform:none}
+.side header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.side header h2{margin:0;font-size:15px}
+.side header .x{margin-left:auto}
+.side .sc{flex:1;overflow:auto;padding:14px 16px;display:grid;gap:16px;align-content:start}
+.side footer{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+.fld{display:grid;gap:6px}
+.fld > span{font-size:12px;color:var(--mut)}
+.refs{display:flex;flex-wrap:wrap;gap:8px}
+.refs .tile{--tile:70px;cursor:grab}
+.refs .tile .n{position:absolute;left:5px;top:5px;font:600 10px ui-monospace,Menlo,monospace;background:rgba(0,0,0,.6);color:#fff;border-radius:4px;padding:0 4px}
+.refs .tile.ghost{opacity:.35}
+.refs .tile.ins::before{content:"";position:absolute;left:-6px;top:4px;bottom:4px;width:3px;border-radius:2px;background:var(--fg)}
+.itemrow{display:flex;align-items:center;gap:10px}
+.itemrow .tile{--tile:52px}
+.itemrow .arrow{color:var(--mut)}
+.pickref{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:3px;display:flex;align-items:center;gap:8px;font-size:12px}
+.pickref:hover{border-color:var(--fg)}
+.pickref img{width:40px;height:53px;object-fit:cover;border-radius:5px}
+.pickref .chev{color:var(--mut);padding-right:6px}
+textarea{width:100%;min-height:150px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px 10px;font-size:12.5px;line-height:1.6}
+textarea:focus{outline:none;border-color:var(--fg)}
+.hint{font-size:11.5px;color:var(--mut)}
+.redoitem{display:grid;grid-template-columns:56px 1fr auto;gap:10px;align-items:start;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.redoitem img{width:56px;height:74px;object-fit:cover;border-radius:6px}
+.redoitem .t{font-size:12.5px;font-weight:500}
+.redoitem .s{font-size:11.5px;color:var(--mut)}
+.redoitem input{width:100%;margin-top:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:3px 8px;font-size:12px}
+.empty{color:var(--mut);font-size:13px;text-align:center;border:1.5px dashed var(--line);border-radius:10px;padding:30px 10px}
+
+/* 遮罩、工作表、弹出菜单、预览、对照 */
+.scrim{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity .3s var(--ease)}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;top:0;z-index:60;width:min(420px,calc(100vw - 32px));background:var(--card);border:1px solid var(--line);border-top:0;border-radius:0 0 14px 14px;box-shadow:var(--shadow);padding:18px 20px 16px;transform:translate(-50%,-110%);transition:transform .35s var(--ease)}
+.sheet.on{transform:translate(-50%,0)}
+.sheet h3{margin:0 0 6px;font-size:15px}
+.sheet p{margin:0 0 16px;color:var(--mut);font-size:13px}
+.sheet .btns{display:flex;justify-content:flex-end;gap:8px}
+.pop{position:fixed;z-index:70;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:6px;min-width:170px;opacity:0;transform:translateY(-4px) scale(.98);transform-origin:top left;transition:opacity .2s var(--ease),transform .25s var(--ease);pointer-events:none}
+.pop.on{opacity:1;transform:none;pointer-events:auto}
+.pop button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;border-radius:6px;padding:5px 8px;font-size:12.5px;text-align:left}
+.pop button:hover,.pop button:focus-visible{background:var(--soft);outline:none}
+.pop button img{width:34px;height:45px;object-fit:cover;border-radius:4px}
+.pop button .ck{margin-left:auto;color:var(--ok);font-weight:700}
+.pop hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
+.ql{position:fixed;inset:0;z-index:80;display:grid;place-items:center;pointer-events:none}
+.ql figure{margin:0;background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:10px 10px 8px;opacity:0;transform:scale(.94);transition:opacity .25s var(--ease),transform .3s var(--ease)}
+.ql.on{pointer-events:auto}
+.ql.on figure{opacity:1;transform:none}
+.ql img{display:block;max-width:min(80vw,620px);max-height:76vh;border-radius:8px}
+.ql figcaption{display:flex;justify-content:space-between;gap:16px;font-size:12px;color:var(--mut);margin-top:6px}
+.cmp{position:fixed;inset:0;z-index:80;display:grid;place-items:center;pointer-events:none}
+.cmp .box{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px;width:min(980px,calc(100vw - 32px));opacity:0;transform:scale(.96);transition:opacity .25s var(--ease),transform .3s var(--ease)}
+.cmp.on{pointer-events:auto}
+.cmp.on .box{opacity:1;transform:none}
+.cmp .hd{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.cmp .hd h3{margin:0;font-size:15px}
+.cmp .three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.cmp figure{margin:0}
+.cmp figure img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px;display:block}
+.cmp figcaption{font-size:12px;color:var(--mut);margin-top:4px}
+.cmp .ft{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+
+/* toast */
+.toasts{position:fixed;right:16px;bottom:76px;z-index:90;display:grid;gap:8px;justify-items:end}
+.toast{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:9px 12px;font-size:13px;max-width:380px;animation:tin .3s var(--ease)}
+.toast.err{border-color:color-mix(in srgb,var(--err) 50%,var(--line))}
+.toast .ic{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.toast.err .ic{background:var(--err)}
+.toast a,.toast .act{color:var(--fg);font-weight:600;border:0;background:none;padding:0;text-decoration:underline}
+.toast .cl{border:0;background:none;color:var(--mut);padding:0 2px}
+.toast.out{opacity:0;transform:translateX(20px);transition:opacity .25s,transform .25s var(--ease)}
+@keyframes tin{from{opacity:0;transform:translateX(24px)}}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="proto-note">交互原型 · 示例数据，不连真实服务 · 试试：<kbd>⌘F</kbd> 搜索、点缩略图后按 <kbd>空格</kbd> 预览、<kbd>⌘↩</kbd> 出图、拖动序号排序、<kbd>Esc</kbd> 关闭任意弹层</div>
+
+<div class="top"><div class="top-in">
+  <div class="brand"><h1>合集</h1><span>页面放图冒烟 · <b id="skucount">3</b> 款 · <a href="#" data-act="toast-run">最近一次出图</a></span></div>
+  <div class="seg dark" role="radiogroup" aria-label="模式" data-seg="mode"></div>
+  <div class="spacer"></div>
+  <div class="size" title="缩略图大小">
+    <svg viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="2"/></svg>
+    <input type="range" id="size" min="64" max="132" step="1" aria-label="缩略图大小">
+    <svg class="big" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="14" height="14" rx="3"/></svg>
+  </div>
+  <label class="search"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="7" r="4.6"/><path d="M10.5 10.5 14 14"/></svg><input id="q" type="search" placeholder="搜索款号" aria-label="搜索款号"><kbd>⌘F</kbd></label>
+  <button class="btn" data-act="sort">按款号排序</button>
+  <form class="newsku" data-act="new"><input id="newsku" placeholder="新款号" aria-label="新款号"><button class="btn">新建款</button></form>
+</div></div>
+
+<main class="wrap" id="list"></main>
+
+<div class="bar"><div class="bar-in">
+  <div class="count" id="count"></div>
+  <label>换装范围 <span class="seg" role="radiogroup" aria-label="统一换装范围" data-seg="swapAll"></span></label>
+  <button class="sw" role="switch" data-sw="keepAll" aria-checked="false"><i></i>全部保持画幅</button>
+  <label>引擎 <span class="seg" role="radiogroup" aria-label="引擎" data-seg="engine"></span></label>
+  <div class="spacer"></div>
+  <button class="btn" data-act="redo">待重出<span class="badge" id="redocount">0</span></button>
+  <button class="btn ghost" id="stop" data-act="stop" hidden>停止</button>
+  <button class="btn primary go" id="go" data-act="go"><span id="golabel">出图</span><span class="pbar" id="pbar" style="width:0"></span></button>
+</div></div>
+
+<aside class="side" id="drawer" aria-label="编辑"></aside>
+<aside class="side" id="redopanel" aria-label="待重出"></aside>
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="alertdialog" aria-modal="true"></div>
+<div class="pop" id="pop" role="menu"></div>
+<div class="ql" id="ql"><figure><img alt=""><figcaption><span id="qlname"></span><span>← → 切换 · 空格或 Esc 关闭</span></figcaption></figure></div>
+<div class="cmp" id="cmp"></div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+'use strict'
+const IMG = 'img/'
+const img = (k) => IMG + k + '.jpg'
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const store = { get(k, d) { try { const v = localStorage.getItem('proto-fi-' + k); return v === null ? d : JSON.parse(v) } catch { return d } }, set(k, v) { try { localStorage.setItem('proto-fi-' + k, JSON.stringify(v)) } catch {} } }
+
+// 图标
+const ICON = {
+  fixedGarment: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M5.5 2 3 3.5 1.5 7l2 1V14h9V8l2-1L13 3.5 10.5 2C10 3.2 9.1 3.8 8 3.8S6 3.2 5.5 2Z"/></svg>',
+  fixedModel: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="4.2" r="2.4"/><path d="M3 14.5c.4-3.2 2.4-5 5-5s4.6 1.8 5 5"/></svg>',
+  oneToOne: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 5h9m-2.5-2.5L11 5 8.5 7.5M14 11H5m2.5-2.5L5 11l2.5 2.5"/></svg>',
+}
+const RULES = [['fixedGarment', '固定服装'], ['fixedModel', '固定模特'], ['oneToOne', '一对一']]
+const SWAPS = [['outfit', '换整套'], ['top', '只换上衣']]
+
+// 示例数据
+const groups = [
+  { sku: '001-SANDRO拉链卫衣', rule: 'fixedGarment', swap: 'outfit', keep: false, picked: true, folded: false, edited: false, stale: false,
+    garments: [1, 2, 3, 4, 5, 6].map((i) => ({ k: 'a-g' + i, name: 'img' + i + '.webp' })),
+    crops: [{ k: 'a-c1', name: '01-全身-正面.jpg' }, { k: 'a-c2', name: '02-半身-正面.jpg' }, { k: 'a-c3', name: '03-细节-领口.jpg' }],
+    refs: ['a-c1', 'a-c2', 'a-c3', 'a-g5', 'a-g4'],
+    models: [
+      { k: 'a-m1', name: '0 (1).jpg', on: true, half: false, outs: [{ v: 1, k: 'a-o1' }, { v: 2, k: 'a-o1-v2' }, { v: 3, k: 'a-o1-v3' }] },
+      { k: 'a-m2', name: '0 (2).jpg', on: true, half: true, outs: [{ v: 1, k: 'a-o2' }, { v: 2, k: 'a-o2-v2' }, { v: 3, k: 'a-o2-v3' }] },
+    ] },
+  { sku: '004-Maje开衫', rule: 'fixedGarment', swap: 'outfit', keep: true, picked: false, folded: false, edited: true, stale: true,
+    garments: [1, 2, 3, 4, 5].map((i) => ({ k: 'b-g' + i, name: 'img' + i + '.webp' })),
+    crops: [{ k: 'b-c1', name: '01-全身-正面.jpg' }, { k: 'b-c3', name: '03-细节-门襟.jpg' }],
+    refs: ['b-c1', 'b-c3', 'b-g4'],
+    models: [
+      { k: 'b-m1', name: '0 (1).jpg', on: true, half: false, outs: [{ v: 1, k: 'b-o1' }] },
+      { k: 'b-m2', name: '0 (2).jpg', on: false, half: false, outs: [{ v: 1, k: 'b-o2' }] },
+    ] },
+  { sku: '005-单品固定模特', rule: 'fixedModel', swap: 'top', keep: false, picked: false, folded: false, edited: false, stale: false,
+    garments: [{ k: 'c-g1', name: 'SANDRO卫衣平铺.webp', on: true }, { k: 'c-g2', name: 'Maje开衫平铺.webp', on: false }, { k: 'c-g3', name: 'Maje开衫上身.webp', on: false }],
+    crops: [], refs: [], itemRefs: {},
+    models: [{ k: 'c-m1', name: '0 (2).jpg', on: true, half: false, outs: [] }],
+    comboOuts: { 'c-g1': [{ v: 1, k: 'c-o1' }] } },
+]
+const allImgs = { 'a-c1': '01-全身-正面.jpg', 'a-c2': '02-半身-正面.jpg', 'a-c3': '03-细节-领口.jpg', 'b-c1': '01-全身-正面.jpg', 'b-c3': '03-细节-门襟.jpg' }
+for (const g of groups) for (const f of g.garments) allImgs[f.k] = f.name
+const ui = { mode: store.get('mode', 'place'), swapAll: 'each', keepAll: false, engine: 'codex', q: '', running: null, redo: [] }
+
+// ===== 控件 =====
+function seg(name, options, value, extra = '') {
+  return options.map(([v, label, icon]) => '<button type="button" role="radio" data-segv="' + v + '" aria-checked="' + (v === value) + '" tabindex="' + (v === value ? 0 : -1) + '"' + extra + '>' + (icon || '') + esc(label) + '</button>').join('')
+}
+function sw(attr, on, label) { return '<button type="button" class="sw" role="switch" ' + attr + ' aria-checked="' + on + '"><i></i>' + esc(label) + '</button>' }
+function fillSeg(el, options, value) { el.innerHTML = seg('', options, value) }
+
+// ===== 计数 =====
+function planned(g) {
+  const ms = g.models.filter((m) => m.on).length
+  if (g.rule === 'fixedGarment') return ms
+  const gs = g.garments.filter((f) => f.on !== false).length
+  if (g.rule === 'fixedModel') return ms === 1 ? gs : 0
+  return Math.min(gs, ms)
+}
+function versions(g) { return g.models.reduce((n, m) => n + m.outs.length, 0) + Object.values(g.comboOuts || {}).reduce((n, o) => n + o.length, 0) }
+
+// ===== 渲染 =====
+function head(g, i) {
+  const on = g.models.filter((m) => m.on).length
+  return '<div class="head">' +
+    '<input type="checkbox" class="pick" data-pick="' + i + '"' + (g.picked ? ' checked' : '') + ' aria-label="选这款出图">' +
+    '<span class="no" draggable="true" data-drag="' + i + '" title="拖动排序">' + String(i + 1).padStart(2, '0') + '</span>' +
+    '<span class="sku">' + esc(g.sku) + '</span>' +
+    '<span class="cnt">衣服 ' + g.garments.length + ' · 模特 ' + on + '/' + g.models.length + ' · 将出 ' + planned(g) + ' 张</span>' +
+    '<div class="tools">' +
+      '<span class="seg" role="radiogroup" aria-label="搭配规则" data-gseg="rule" data-g="' + i + '">' + seg('', RULES.map(([v, l]) => [v, l, ICON[v]]), g.rule) + '</span>' +
+      '<span class="seg" role="radiogroup" aria-label="换装范围" data-gseg="swap" data-g="' + i + '">' + seg('', SWAPS, g.swap) + '</span>' +
+      sw('data-gsw="keep" data-g="' + i + '"', g.keep, '保持画幅') +
+      '<button class="btn sm state' + (g.stale ? ' stale' : '') + '" data-act="edit" data-g="' + i + '">编辑' + (g.stale ? ' · 提示词可能对不上' : g.edited ? ' <b>· 已改</b>' : '') + '</button>' +
+      '<button class="btn sm" data-act="only" data-g="' + i + '">只出这款</button>' +
+      '<button class="more" data-act="menu" data-g="' + i + '" aria-label="更多" aria-haspopup="menu">⋯</button>' +
+    '</div></div>' +
+    (g.folded ? '<div class="summary">衣服 ' + g.garments.length + ' · 模特 ' + on + '/' + g.models.length + ' · 将出 ' + planned(g) + ' 张 · 成图 ' + versions(g) + ' 版</div>' : '')
+}
+
+function tile(k, name, opts = {}) {
+  const cls = ['tile', opts.sel !== undefined ? 'selectable' : '', opts.sel ? 'sel' : ''].join(' ')
+  return '<div class="' + cls + '" tabindex="0" data-k="' + k + '" data-name="' + esc(name) + '" data-list="' + (opts.list || '') + '"' + (opts.attrs || '') + '>' +
+    '<div class="ph"><img src="' + img(k) + '" alt="" loading="lazy">' +
+    (opts.tag ? '<span class="tag">' + opts.tag + '</span>' : '') +
+    (opts.sel !== undefined ? '<span class="tick"></span>' : '') +
+    (opts.half ? '<span class="halfmark">半身</span>' : '') +
+    (opts.ver ? '<span class="ver">v' + opts.ver + '</span>' : '') +
+    (opts.redo ? '<span class="redo">待重出</span>' : '') +
+    (opts.acts ? '<div class="acts">' + opts.acts + '</div>' : '') +
+    '</div><div class="cap">' + esc(name) + '</div></div>'
+}
+
+const inRedo = (k) => ui.redo.some((r) => r.k === k)
+function outTiles(g, i) {
+  const list = []
+  if (g.rule === 'fixedGarment') {
+    for (const m of g.models) for (const o of m.outs) list.push({ o, model: m, label: m.name })
+  } else {
+    for (const [gk, outs] of Object.entries(g.comboOuts || {})) for (const o of outs) list.push({ o, model: g.models[0], garment: gk, label: allImgs[gk].replace(/\.\w+$/, '') + '-' + g.models[0].name })
+  }
+  if (!list.length) return '<div class="outs"><span class="lab">成图</span><span class="cnt">还没有成图</span></div>'
+  return '<div class="outs"><span class="lab">成图</span>' + list.map(({ o, label }) => tile(o.k, label, {
+    ver: o.v, redo: inRedo(o.k), list: 'outs-' + i,
+    acts: '<button data-act="cmp" data-g="' + i + '" data-o="' + o.k + '">对照</button><button data-act="addredo" data-g="' + i + '" data-o="' + o.k + '">' + (inRedo(o.k) ? '已在待重出' : '待重出') + '</button>',
+  })).join('') + '</div>'
+}
+
+function placeBody(g, i) {
+  const pickG = g.rule !== 'fixedGarment'
+  const garments = g.garments.map((f, j) => tile(f.k, f.name, { list: 'g-' + i, ...(pickG ? { sel: f.on !== false, attrs: ' data-tg="' + i + ':' + j + '"' } : {}), tag: g.refs.includes(f.k) ? '参考' : '' })).join('')
+  const models = g.models.map((m, j) => tile(m.k, m.name, { list: 'm-' + i, sel: m.on, half: m.half, attrs: ' data-tm="' + i + ':' + j + '"', acts: '<button data-act="half" data-g="' + i + '" data-m="' + j + '">' + (m.half ? '取消半身' : '标半身') + '</button>' })).join('')
+  return '<div class="cols">' +
+    '<div class="col" data-drop="g-' + i + '"><h3>衣服 <small>' + g.garments.length + ' 张' + (pickG ? ' · 点图选中' : '') + '</small>' + (g.queue === 'g' ? '<span class="q">排队中…</span>' : '') + '</h3><div class="tiles">' + garments + '<button class="add" data-act="add" data-drop="g-' + i + '" aria-label="放入衣服图">＋</button></div></div>' +
+    '<div class="col" data-drop="m-' + i + '"><h3>模特 <small>点图选中 · 已选 ' + g.models.filter((m) => m.on).length + '/' + g.models.length + '</small>' + (g.queue === 'm' ? '<span class="q">排队中…</span>' : '') + '</h3><div class="tiles">' + models + '<button class="add" data-act="add" data-drop="m-' + i + '" aria-label="放入模特图">＋</button></div></div>' +
+    '</div>' + outTiles(g, i)
+}
+
+function nodeBody(g, i) {
+  const gar = '<div class="node"><h4>衣服 ' + g.garments.length + '</h4><div class="tiles" style="--tile:46px">' + g.garments.slice(0, 6).map((f) => tile(f.k, '', { list: 'g-' + i })).join('') + '</div></div>'
+  const set = '<div class="node nset"><h4>设置 <button class="btn sm ghost" data-act="edit" data-g="' + i + '">在抽屉里编辑 →</button></h4>' +
+    '<div class="row"><span>规则</span><span class="seg" role="radiogroup" aria-label="搭配规则" data-gseg="rule" data-g="' + i + '">' + seg('', RULES.map(([v, l]) => [v, l, ICON[v]]), g.rule) + '</span></div>' +
+    '<div class="row"><span>范围</span><span class="seg" role="radiogroup" aria-label="换装范围" data-gseg="swap" data-g="' + i + '">' + seg('', SWAPS, g.swap) + '</span></div>' +
+    '<div class="row"><span>画幅</span>' + sw('data-gsw="keep" data-g="' + i + '"', g.keep, g.keep ? '保持' : '默认') + '</div>' +
+    '<div class="row"><span>参考图</span><b style="font-weight:500">' + (g.rule === 'fixedGarment' ? g.refs.length + ' 张' : '每件衣服 1 张') + '</b></div>' +
+    '<div class="row"><span>提示词</span><b style="font-weight:500;color:' + (g.stale ? 'var(--warn)' : 'inherit') + '">' + (g.stale ? '已改 · 可能对不上' : g.edited ? '已改' : '默认') + '</b></div></div>'
+  let lanes
+  if (g.rule === 'fixedGarment') {
+    lanes = g.models.map((m, j) => '<div class="lane">' + tile(m.k, m.name, { list: 'm-' + i, sel: m.on, half: m.half, attrs: ' data-tm="' + i + ':' + j + '"' }) + '<span class="wire"></span><div class="nver">' + (m.outs.map((o) => tile(o.k, 'v' + o.v, { ver: o.v, redo: inRedo(o.k), list: 'outs-' + i, acts: '<button data-act="cmp" data-g="' + i + '" data-o="' + o.k + '">对照</button><button data-act="addredo" data-g="' + i + '" data-o="' + o.k + '">待重出</button>' })).join('') || '<span class="cnt">未出图</span>') + '</div></div>').join('')
+  } else {
+    lanes = g.garments.map((f, j) => { const outs = (g.comboOuts || {})[f.k] || []; return '<div class="lane">' + tile(f.k, f.name, { list: 'g-' + i, sel: f.on !== false, attrs: ' data-tg="' + i + ':' + j + '"' }) + '<span class="wire"></span>' + tile(g.models[0].k, g.models[0].name, { list: 'm-' + i }) + '<span class="wire"></span><div class="nver">' + (outs.map((o) => tile(o.k, 'v' + o.v, { ver: o.v, list: 'outs-' + i, acts: '<button data-act="cmp" data-g="' + i + '" data-o="' + o.k + '">对照</button><button data-act="addredo" data-g="' + i + '" data-o="' + o.k + '">待重出</button>' })).join('') || '<span class="cnt">未出图</span>') + '</div></div>' }).join('')
+  }
+  return '<div class="graph">' + gar + '<span class="wire"></span>' + set + '<span class="wire"></span><div class="node"><h4>' + (g.rule === 'fixedGarment' ? '模特 → 成图版本' : '衣服 → 模特 → 成图版本') + '</h4><div class="lanes">' + lanes + '</div></div></div>'
+}
+
+function render() {
+  const q = ui.q.trim().toLowerCase()
+  document.getElementById('list').innerHTML = groups.map((g, i) => {
+    if (q && !g.sku.toLowerCase().includes(q)) return ''
+    return '<section class="card' + (g.picked ? ' is-picked' : '') + (g.folded ? ' folded' : '') + '" data-card="' + i + '">' + head(g, i) +
+      '<div class="body"><div>' + (ui.mode === 'place' ? placeBody(g, i) : nodeBody(g, i)) + '</div></div></section>'
+  }).join('') || '<div class="empty">没有匹配「' + esc(ui.q) + '」的款号</div>'
+  document.getElementById('skucount').textContent = groups.length
+  fillSeg(document.querySelector('[data-seg=mode]'), [['place', '放图'], ['node', '节点']], ui.mode)
+  fillSeg(document.querySelector('[data-seg=swapAll]'), [['each', '按各款设置'], ['outfit', '全部换整套'], ['top', '全部只换上衣']], ui.swapAll)
+  fillSeg(document.querySelector('[data-seg=engine]'), [['codex', 'codex'], ['apimart', 'apimart']], ui.engine)
+  document.querySelector('[data-sw=keepAll]').setAttribute('aria-checked', ui.keepAll)
+  const picked = groups.filter((g) => g.picked)
+  const shots = picked.reduce((n, g) => n + planned(g), 0)
+  document.getElementById('count').innerHTML = '已选 <b>' + picked.length + '</b> 款 · 出图 <b>' + shots + '</b> 张'
+  const rc = document.getElementById('redocount'); rc.textContent = ui.redo.length; rc.classList.toggle('zero', !ui.redo.length)
+  const go = document.getElementById('go')
+  if (!ui.running) { document.getElementById('golabel').textContent = '出图'; go.disabled = shots === 0; document.getElementById('stop').hidden = true; document.getElementById('pbar').style.width = '0' }
+  if (document.getElementById('redopanel').classList.contains('open')) renderRedo()
+}
+
+// ===== toast =====
+function toast(msg, opts = {}) {
+  const el = document.createElement('div')
+  el.className = 'toast' + (opts.err ? ' err' : '')
+  el.innerHTML = '<span class="ic"></span><span>' + msg + '</span>' + (opts.action ? '<button class="act">' + esc(opts.action) + '</button>' : '') + '<button class="cl" aria-label="关闭">✕</button>'
+  const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 250) }
+  el.querySelector('.cl').onclick = close
+  if (opts.action) el.querySelector('.act').onclick = () => { opts.onAction(); close() }
+  document.getElementById('toasts').append(el)
+  if (!opts.err) setTimeout(close, opts.ms || 3000)
+}
+
+// ===== 工作表确认 =====
+let sheetDone = null
+function confirmSheet(title, text, ok = '确定', danger = false) {
+  return new Promise((resolve) => {
+    const el = document.getElementById('sheet')
+    el.innerHTML = '<h3>' + esc(title) + '</h3><p>' + esc(text) + '</p><div class="btns"><button class="btn" data-sheet="0">取消</button><button class="btn primary' + (danger ? ' warn' : '') + '" data-sheet="1">' + esc(ok) + '</button></div>'
+    sheetDone = (v) => { el.classList.remove('on'); scrim(false); sheetDone = null; resolve(v) }
+    scrim(true); el.classList.add('on')
+    setTimeout(() => el.querySelector('[data-sheet="1"]').focus(), 50)
+  })
+}
+function scrim(on) { document.getElementById('scrim').classList.toggle('on', on) }
+
+// ===== 弹出菜单 =====
+let popClose = null
+function openPop(anchor, html, onPick) {
+  const el = document.getElementById('pop')
+  el.innerHTML = html
+  const r = anchor.getBoundingClientRect()
+  el.style.left = Math.min(r.left, innerWidth - 260) + 'px'
+  el.style.top = (r.bottom + 6 + 300 > innerHeight ? Math.max(8, r.top - 6 - Math.min(300, el.scrollHeight)) : r.bottom + 6) + 'px'
+  el.classList.add('on')
+  el.onclick = (e) => { const b = e.target.closest('button[data-v]'); if (b) { onPick(b.dataset.v); closePop() } }
+  popClose = () => { el.classList.remove('on'); popClose = null; anchor.focus() }
+  setTimeout(() => el.querySelector('button')?.focus(), 30)
+}
+function closePop() { popClose && popClose() }
+
+// ===== 快速预览 =====
+let ql = null
+function focusTile(t) { document.querySelectorAll('.tile.focus').forEach((x) => x.classList.remove('focus')); if (t) t.classList.add('focus') }
+function openQL(t) {
+  const list = [...document.querySelectorAll('.tile[data-list="' + t.dataset.list + '"]')]
+  ql = { list, i: list.indexOf(t) }
+  showQL(); document.getElementById('ql').classList.add('on'); scrim(true)
+}
+function showQL() { const t = ql.list[ql.i]; document.querySelector('#ql img').src = img(t.dataset.k); document.getElementById('qlname').textContent = t.dataset.name || ''; focusTile(t) }
+function closeQL() { document.getElementById('ql').classList.remove('on'); scrim(false); ql = null }
+
+// ===== 成图对照 =====
+let cmp = null
+function openCmp(gi, ok) {
+  const g = groups[gi]
+  let model, outs, garment
+  if (g.rule === 'fixedGarment') { model = g.models.find((m) => m.outs.some((o) => o.k === ok)); outs = model.outs; garment = g.refs[0] }
+  else { garment = Object.keys(g.comboOuts).find((k) => g.comboOuts[k].some((o) => o.k === ok)); model = g.models[0]; outs = g.comboOuts[garment] }
+  cmp = { gi, model, outs, garment, i: outs.findIndex((o) => o.k === ok) }
+  renderCmp(); document.getElementById('cmp').classList.add('on'); scrim(true)
+}
+function renderCmp() {
+  const { gi, model, outs, garment, i } = cmp
+  const o = outs[i]
+  document.getElementById('cmp').innerHTML = '<div class="box" role="dialog" aria-label="成图对照"><div class="hd"><h3>' + esc(groups[gi].sku) + ' · ' + esc(model.name) + '</h3>' +
+    '<span class="seg" role="radiogroup" aria-label="版本" data-cmpseg>' + seg('', outs.map((x, j) => [String(j), 'v' + x.v]), String(i)) + '</span><span class="cnt">← → 切换版本</span><div class="spacer"></div><button class="btn sm ghost" data-act="cmpclose">关闭</button></div>' +
+    '<div class="three"><figure><img src="' + img(model.k) + '" alt=""><figcaption>原模特图 · ' + esc(model.name) + '</figcaption></figure><figure><img src="' + img(garment) + '" alt=""><figcaption>衣服参考图 · ' + esc(allImgs[garment] || '') + '</figcaption></figure><figure><img src="' + img(o.k) + '" alt=""><figcaption>成图 v' + o.v + '</figcaption></figure></div>' +
+    '<div class="ft"><a class="btn" href="#" data-act="toast-run">出图记录</a><button class="btn primary" data-act="addredo" data-g="' + gi + '" data-o="' + o.k + '">' + (inRedo(o.k) ? '已在待重出' : '加入待重出') + '</button></div></div>'
+}
+function closeCmp() { document.getElementById('cmp').classList.remove('on'); scrim(false); cmp = null }
+
+// ===== 抽屉 =====
+let drawerG = null
+function openSide(id) { for (const s of document.querySelectorAll('.side')) s.classList.toggle('open', s.id === id) }
+function closeSides() { document.querySelectorAll('.side').forEach((s) => s.classList.remove('open')); drawerG = null }
+function openDrawer(i) { drawerG = i; renderDrawer(); openSide('drawer') }
+function promptText(g) { return (g.edited ? '（已改）' : '') + '图1是模特，' + (g.rule === 'fixedGarment' ? '图2到图' + (g.refs.length + 1) + '是这套服装的参考图。' : '图2是这件衣服的参考图。') + '把图1模特身上的' + (g.swap === 'top' ? '上衣' : '整套衣服') + '换成参考图里的服装，保持人物、姿势、手部动作和背景不变。' + (g.keep ? '\n保持图1的取景范围，被截掉、没拍到的身体部位不要补画。' : '') }
+function renderDrawer() {
+  const g = groups[drawerG]
+  let refs
+  if (g.rule === 'fixedGarment') {
+    refs = '<div class="fld"><span>参考图 · 拖动排序，拖到面板外移除</span><div class="refs" id="refs">' + g.refs.map((k, j) => '<div class="tile" draggable="true" data-ref="' + j + '" data-k="' + k + '" data-name="' + esc(allImgs[k]) + '" data-list="refs"><div class="ph"><img src="' + img(k) + '" alt=""><span class="n">' + (j + 2) + '</span></div><div class="cap">' + esc(allImgs[k]) + '</div></div>').join('') + '</div><span class="hint">图号从 2 开始，图 1 是模特</span></div>'
+  } else {
+    refs = '<div class="fld"><span>每件衣服用的参考图 · 点右侧换</span>' + g.garments.map((f) => { const cur = (g.itemRefs || {})[f.k] || f.k; return '<div class="itemrow">' + tile(f.k, f.name, { list: 'items' }) + '<span class="arrow">→</span><button class="pickref" data-act="pickref" data-f="' + f.k + '" aria-haspopup="menu"><img src="' + img(cur) + '" alt=""><span>' + esc(allImgs[cur]) + '</span><span class="chev">⌄</span></button></div>' }).join('') + '</div>'
+  }
+  document.getElementById('drawer').innerHTML = '<header><h2>编辑 · ' + esc(g.sku) + '</h2><button class="btn sm ghost x" data-act="closeside">关闭</button></header><div class="sc">' +
+    '<div class="fld"><span>搭配规则</span><span class="seg" role="radiogroup" aria-label="搭配规则" data-gseg="rule" data-g="' + drawerG + '">' + seg('', RULES.map(([v, l]) => [v, l, ICON[v]]), g.rule) + '</span></div>' +
+    '<div class="fld"><span>换装范围</span><span class="seg" role="radiogroup" aria-label="换装范围" data-gseg="swap" data-g="' + drawerG + '">' + seg('', SWAPS, g.swap) + '</span></div>' +
+    '<div class="fld"><span>画幅</span>' + sw('data-gsw="keep" data-g="' + drawerG + '"', g.keep, '保持画幅（被截掉的部位不补画）') + '</div>' + refs +
+    (g.rule === 'fixedGarment' ? '<div class="fld"><span>提示词' + (g.stale ? ' · <b style="color:var(--warn);font-weight:500">参考图变了，图号可能对不上</b>' : '') + '</span><textarea id="prompt">' + esc(promptText(g)) + '</textarea></div>' : '<p class="hint">这两种规则下要逐张调整，用待重出备注。</p>') +
+    '</div><footer><button class="btn" data-act="restore">恢复默认</button><button class="btn primary" data-act="closeside">完成</button></footer>'
+  const ta = document.getElementById('prompt'); if (ta) ta.oninput = () => { g.edited = true; renderHeadOnly() }
+}
+function renderHeadOnly() { const d = drawerG; render(); drawerG = d }
+
+// ===== 待重出 =====
+function renderRedo() {
+  const el = document.getElementById('redopanel')
+  el.innerHTML = '<header><h2>待重出 · ' + ui.redo.length + ' 张</h2><button class="btn sm ghost x" data-act="closeside">关闭</button></header><div class="sc">' +
+    (ui.redo.length ? ui.redo.map((r, j) => '<div class="redoitem"><img src="' + img(r.k) + '" alt=""><div><div class="t">' + esc(r.sku) + '</div><div class="s">' + esc(r.label) + ' · v' + r.v + '</div><input placeholder="备注（追加到提示词末尾）" value="' + esc(r.note || '') + '" data-note="' + j + '" maxlength="200"></div><button class="btn sm ghost" data-act="delredo" data-j="' + j + '" aria-label="移除">✕</button></div>').join('') : '<div class="empty">在成图上点「待重出」加入这里</div>') +
+    '</div><footer><button class="btn primary" data-act="runredo"' + (ui.redo.length ? '' : ' disabled') + '>重出这 ' + ui.redo.length + ' 张</button></footer>'
+}
+function addRedo(gi, ok) {
+  const g = groups[gi]
+  if (inRedo(ok)) { toast('这张已经在待重出里'); return }
+  let r
+  for (const m of g.models) for (const o of m.outs) if (o.k === ok) r = { k: ok, sku: g.sku, label: m.name, v: o.v, combo: m.k }
+  for (const [gk, outs] of Object.entries(g.comboOuts || {})) for (const o of outs) if (o.k === ok) r = { k: ok, sku: g.sku, label: allImgs[gk] + ' × ' + g.models[0].name, v: o.v, combo: gk }
+  const same = ui.redo.findIndex((x) => x.sku === r.sku && x.combo === r.combo)
+  if (same >= 0) { ui.redo.splice(same, 1, r); toast('同一组合只重出一次，已换成 v' + r.v) } else { ui.redo.push(r); toast('已加入待重出', { action: '打开清单', onAction: () => { renderRedo(); openSide('redopanel') } }) }
+  render(); if (cmp) renderCmp()
+}
+
+// ===== 出图模拟 =====
+async function startRun(only) {
+  if (ui.running) return
+  const list = only !== undefined ? [groups[only]] : groups.filter((g) => g.picked)
+  const total = list.reduce((n, g) => n + planned(g), 0)
+  if (!total) { toast('勾选要出图的款', { err: true }); return }
+  if (ui.engine === 'apimart' && !(await confirmSheet('用 apimart 出图？', 'apimart 会产生真实费用，本次共 ' + total + ' 张。', '确定出图'))) return
+  ui.running = { done: 0, total }
+  toast('开始出图 · 共 ' + total + ' 张')
+  document.getElementById('stop').hidden = false
+  const tick = () => {
+    if (!ui.running) return
+    ui.running.done++
+    document.getElementById('golabel').textContent = '出图中 ' + ui.running.done + '/' + total
+    document.getElementById('pbar').style.width = (ui.running.done / total * 100) + '%'
+    if (ui.running.done >= total) {
+      ui.running = null
+      toast('出图完成 · 交付 ' + total + ' 张 · 失败 0 张 · <a href="#" data-act="toast-run">查看出图记录</a>', { ms: 6000 })
+      render()
+    } else ui.running.timer = setTimeout(tick, 900)
+  }
+  document.getElementById('golabel').textContent = '出图中 0/' + total
+  document.getElementById('go').disabled = true
+  ui.running.timer = setTimeout(tick, 900)
+}
+
+// ===== 拖放：款排序 =====
+let dragCard = null
+document.addEventListener('dragstart', (e) => {
+  const h = e.target.closest('[data-drag]')
+  if (h) { dragCard = +h.dataset.drag; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'card'); h.closest('.card').classList.add('dragging'); return }
+  const r = e.target.closest('[data-ref]')
+  if (r) { dragRef = +r.dataset.ref; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'ref'); setTimeout(() => r.classList.add('ghost')) }
+})
+document.addEventListener('dragend', () => { document.querySelectorAll('.dragging,.drop-before,.drop-after,.ghost,.ins,.over').forEach((x) => x.classList.remove('dragging', 'drop-before', 'drop-after', 'ghost', 'ins', 'over')); if (dragRef !== null && !refDropped && drawerG !== null) removeRefOut(); dragCard = null; dragRef = null; refDropped = false })
+document.addEventListener('dragover', (e) => {
+  if (dragCard !== null) {
+    const c = e.target.closest('[data-card]'); if (!c) return
+    e.preventDefault()
+    document.querySelectorAll('.drop-before,.drop-after').forEach((x) => x.classList.remove('drop-before', 'drop-after'))
+    const r = c.getBoundingClientRect(); c.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-before' : 'drop-after'); return
+  }
+  if (dragRef !== null) {
+    const t = e.target.closest('[data-ref]'); if (!t) return
+    e.preventDefault(); document.querySelectorAll('.ins').forEach((x) => x.classList.remove('ins')); t.classList.add('ins'); return
+  }
+  const col = e.target.closest('[data-drop]')
+  if (col && e.dataTransfer.types.includes('Files')) { e.preventDefault(); document.querySelectorAll('.over').forEach((x) => x !== col.closest('.col') && x.classList.remove('over')); col.closest('.col')?.classList.add('over') }
+})
+document.addEventListener('dragleave', (e) => { const col = e.target.closest('.col'); if (col && !col.contains(e.relatedTarget)) col.classList.remove('over') })
+document.addEventListener('drop', (e) => {
+  if (dragCard !== null) {
+    const c = e.target.closest('[data-card]'); if (!c) return
+    e.preventDefault()
+    let to = +c.dataset.card; const after = c.classList.contains('drop-after'); const from = dragCard
+    const [moved] = groups.splice(from, 1); if (from < to) to--; groups.splice(after ? to + 1 : to, 0, moved)
+    render(); toast('已调整顺序：' + esc(moved.sku) + ' 排第 ' + (groups.indexOf(moved) + 1)); return
+  }
+  if (dragRef !== null) {
+    const t = e.target.closest('[data-ref]'); if (!t) return
+    e.preventDefault(); refDropped = true
+    const g = groups[drawerG]; const to = +t.dataset.ref; const [k] = g.refs.splice(dragRef, 1); g.refs.splice(to, 0, k)
+    g.edited = g.edited || false; renderDrawer(); render(); return
+  }
+  const col = e.target.closest('[data-drop]')
+  if (col && e.dataTransfer.files.length) { e.preventDefault(); col.closest('.col')?.classList.remove('over'); fakeUpload(col.dataset.drop, [...e.dataTransfer.files]) }
+})
+let dragRef = null; let refDropped = false
+function removeRefOut() { const g = groups[drawerG]; const [k] = g.refs.splice(dragRef, 1); renderDrawer(); render(); toast('已移除参考图 ' + esc(allImgs[k]), { action: '撤销', onAction: () => { g.refs.splice(dragRef ?? 0, 0, k); renderDrawer(); render() }, ms: 5000 }) }
+
+// ===== 放图（原型里只模拟） =====
+let uploading = {}
+function fakeUpload(target, files) {
+  const [kind, gi] = target.split('-'); const g = groups[+gi]
+  if (uploading[gi]) { g.queue = kind; render(); setTimeout(() => { g.queue = null; fakeUpload(target, files) }, 1400); return }
+  uploading[gi] = true
+  const n = files.length || 1
+  setTimeout(() => {
+    uploading[gi] = false
+    const urls = files.filter((f) => f.type.startsWith('image/')).map((f) => URL.createObjectURL(f))
+    toast((kind === 'g' ? '服装图' : '模特图') + '放入成功 ' + n + ' 张 · ' + esc(g.sku) + (urls.length ? '' : '（原型：未真正保存）'))
+  }, 1200)
+}
+
+// ===== 点击 =====
+document.addEventListener('click', async (e) => {
+  const sb = e.target.closest('[data-sheet]'); if (sb && sheetDone) { sheetDone(sb.dataset.sheet === '1'); return }
+  if (e.target.id === 'scrim') { if (sheetDone) sheetDone(false); else if (ql) closeQL(); else if (cmp) closeCmp(); return }
+  const segb = e.target.closest('[data-segv]')
+  if (segb) {
+    const box = segb.parentElement; const v = segb.dataset.segv
+    if (box.dataset.seg === 'mode') { ui.mode = v; store.set('mode', v); render() }
+    else if (box.dataset.seg === 'swapAll') { ui.swapAll = v; render() }
+    else if (box.dataset.seg === 'engine') { ui.engine = v; render() }
+    else if (box.dataset.gseg) { const g = groups[+box.dataset.g]; g[box.dataset.gseg] = v; render(); if (drawerG !== null) renderDrawer() }
+    else if (box.hasAttribute('data-cmpseg')) { cmp.i = +v; renderCmp() }
+    return
+  }
+  const swb = e.target.closest('.sw')
+  if (swb) {
+    if (swb.dataset.sw === 'keepAll') { ui.keepAll = !ui.keepAll; render() }
+    else { const g = groups[+swb.dataset.g]; g.keep = !g.keep; render(); if (drawerG !== null) renderDrawer() }
+    return
+  }
+  const pick = e.target.closest('[data-pick]'); if (pick) { groups[+pick.dataset.pick].picked = pick.checked; render(); return }
+  const a = e.target.closest('[data-act]')
+  if (a) {
+    const act = a.dataset.act; const gi = a.dataset.g !== undefined ? +a.dataset.g : null
+    if (act !== 'menu') e.preventDefault()
+    if (act === 'edit') openDrawer(gi)
+    else if (act === 'only') startRun(gi)
+    else if (act === 'go') startRun()
+    else if (act === 'stop') { if (await confirmSheet('停止出图？', '已交付的图会保留，排队中的不再生成。', '停止', true)) { clearTimeout(ui.running.timer); const d = ui.running.done; ui.running = null; render(); toast('已停止 · 已交付 ' + d + ' 张') } }
+    else if (act === 'redo') { renderRedo(); openSide('redopanel') }
+    else if (act === 'closeside') closeSides()
+    else if (act === 'half') { const m = groups[gi].models[+a.dataset.m]; m.half = !m.half; render(); toast(esc(m.name) + (m.half ? ' 标为半身，出图时加保持画幅句' : ' 取消半身')) }
+    else if (act === 'addredo') addRedo(gi, a.dataset.o)
+    else if (act === 'cmp') openCmp(gi, a.dataset.o)
+    else if (act === 'cmpclose') closeCmp()
+    else if (act === 'delredo') { const j = +a.dataset.j; const [r] = ui.redo.splice(j, 1); render(); toast('已移除 ' + esc(r.label), { action: '撤销', ms: 5000, onAction: () => { ui.redo.splice(j, 0, r); render() } }) }
+    else if (act === 'runredo') { if (ui.engine === 'apimart' && !(await confirmSheet('用 apimart 重出？', 'apimart 会产生真实费用，本次共 ' + ui.redo.length + ' 张。', '确定重出'))) return; const n = ui.redo.length; ui.redo = []; closeSides(); render(); toast('已开始重出 ' + n + ' 张 · <a href="#" data-act="toast-run">查看出图记录</a>', { ms: 5000 }) }
+    else if (act === 'restore') { if (await confirmSheet('恢复默认？', '参考图和提示词回到默认，搭配规则与换装范围不变。', '恢复默认')) { const g = groups[drawerG]; g.edited = false; g.stale = false; renderDrawer(); render(); toast('已恢复默认') } }
+    else if (act === 'pickref') {
+      const g = groups[drawerG]; const fk = a.dataset.f; const cur = (g.itemRefs || {})[fk] || fk
+      // 示例：每件单品衣服各自的裁图
+      const CROPS = { 'c-g1': ['a-c1', 'a-c2', 'a-c3'], 'c-g2': ['b-c1', 'b-c3'], 'c-g3': ['b-c1', 'b-c3'] }
+      const opts = [[fk, allImgs[fk] + '（原图）']].concat((CROPS[fk] || []).map((k) => [k, '裁图 ' + allImgs[k]]))
+      openPop(a, opts.map(([k, l], j) => (j === 1 ? '<hr>' : '') + '<button role="menuitem" data-v="' + k + '"><img src="' + img(k) + '" alt="">' + esc(l) + (k === cur ? '<span class="ck">✓</span>' : '') + '</button>').join(''), (v) => { g.itemRefs = { ...g.itemRefs, [fk]: v }; renderDrawer(); toast('参考图已换成 ' + esc(allImgs[v])) })
+    }
+    else if (act === 'menu') {
+      const g = groups[gi]
+      openPop(a, '<button role="menuitem" data-v="first">移到最前</button><button role="menuitem" data-v="last">移到最后</button><hr><button role="menuitem" data-v="fold">' + (g.folded ? '展开' : '折叠') + '</button>', (v) => {
+        if (v === 'fold') { g.folded = !g.folded } else { groups.splice(gi, 1); v === 'first' ? groups.unshift(g) : groups.push(g); toast(esc(g.sku) + (v === 'first' ? ' 已移到最前' : ' 已移到最后')) }
+        render()
+      })
+    }
+    else if (act === 'sort') { groups.sort((x, y) => x.sku.localeCompare(y.sku, 'zh-CN', { numeric: true })); render(); toast('已按款号排序') }
+    else if (act === 'add') { const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.accept = 'image/*'; inp.onchange = () => fakeUpload(a.dataset.drop, [...inp.files]); inp.click() }
+    else if (act === 'toast-run') toast('原型：这里会打开出图记录（run 节点图）')
+    return
+  }
+  const tg = e.target.closest('[data-tg]'); if (tg) { const [i, j] = tg.dataset.tg.split(':').map(Number); const f = groups[i].garments[j]; f.on = f.on === false; render(); focusTile(document.querySelector('[data-tg="' + i + ':' + j + '"]')); return }
+  const tm = e.target.closest('[data-tm]'); if (tm) { const [i, j] = tm.dataset.tm.split(':').map(Number); groups[i].models[j].on = !groups[i].models[j].on; render(); focusTile(document.querySelector('[data-tm="' + i + ':' + j + '"]')); return }
+  const t = e.target.closest('.tile'); if (t) { focusTile(t); return }
+  if (popClose && !e.target.closest('#pop')) closePop()
+  if (!e.target.closest('.side') && !e.target.closest('.toast') && document.querySelector('.side.open') && !sheetDone) closeSides()
+})
+document.addEventListener('submit', (e) => {
+  e.preventDefault()
+  const v = document.getElementById('newsku').value.trim(); if (!v) { toast('请先填写款号', { err: true }); return }
+  if (groups.some((g) => g.sku === v)) { toast('款号已存在：' + esc(v), { err: true }); return }
+  groups.push({ sku: v, rule: 'fixedGarment', swap: 'outfit', keep: false, picked: false, folded: false, edited: false, stale: false, garments: [], crops: [], refs: [], models: [] })
+  document.getElementById('newsku').value = ''; render(); toast('已新建 ' + esc(v) + '，把衣服图和模特图拖进来')
+})
+document.addEventListener('change', (e) => { if (e.target.dataset.note !== undefined) { ui.redo[+e.target.dataset.note].note = e.target.value; toast('备注已保存') } })
+document.getElementById('q').addEventListener('input', (e) => { ui.q = e.target.value; render() })
+const size = document.getElementById('size')
+size.value = store.get('tile', 84); document.documentElement.style.setProperty('--tile', size.value + 'px')
+size.addEventListener('input', () => { document.documentElement.style.setProperty('--tile', size.value + 'px'); store.set('tile', +size.value) })
+
+// ===== 键盘 =====
+document.addEventListener('keydown', (e) => {
+  const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName) && document.activeElement.type !== 'range'
+  if (sheetDone) { if (e.key === 'Escape') { e.preventDefault(); sheetDone(false) } else if (e.key === 'Enter') { e.preventDefault(); sheetDone(true) } return }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') { e.preventDefault(); document.getElementById('q').focus(); document.getElementById('q').select(); return }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); startRun(); return }
+  if (e.key === 'Escape') {
+    if (popClose) closePop()
+    else if (ql) closeQL()
+    else if (cmp) closeCmp()
+    else if (document.querySelector('.side.open')) closeSides()
+    else if (document.activeElement.id === 'q') { ui.q = ''; e.target.value = ''; document.activeElement.blur(); render() }
+    return
+  }
+  if (ql) {
+    if (e.key === ' ') { e.preventDefault(); closeQL() }
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); ql.i = (ql.i + (e.key === 'ArrowRight' ? 1 : -1) + ql.list.length) % ql.list.length; showQL() }
+    return
+  }
+  if (cmp && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { e.preventDefault(); cmp.i = Math.max(0, Math.min(cmp.outs.length - 1, cmp.i + (e.key === 'ArrowRight' ? 1 : -1))); renderCmp(); return }
+  if (popClose && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); const bs = [...document.querySelectorAll('#pop button')]; const i = bs.indexOf(document.activeElement); bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length].focus(); return }
+  if (typing) return
+  // 分段控件：← → 切换
+  const segb = document.activeElement.closest && document.activeElement.closest('[role=radiogroup]')
+  if (segb && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+    e.preventDefault(); const bs = [...segb.querySelectorAll('[data-segv]')]; const cur = bs.findIndex((b) => b.getAttribute('aria-checked') === 'true')
+    const nb = bs[(cur + (e.key === 'ArrowRight' ? 1 : -1) + bs.length) % bs.length]; const label = segb.getAttribute('aria-label'); nb.click()
+    setTimeout(() => { const box = [...document.querySelectorAll('[role=radiogroup]')].find((x) => x.getAttribute('aria-label') === label && x.contains(document.querySelector('[data-segv="' + nb.dataset.segv + '"][aria-checked=true]'))); box?.querySelector('[aria-checked=true]')?.focus() }); return
+  }
+  if (e.key === ' ') {
+    const t = document.querySelector('.tile.focus') || document.activeElement.closest?.('.tile')
+    if (t) { e.preventDefault(); openQL(t) }
+  }
+})
+document.addEventListener('focusin', (e) => { const t = e.target.closest?.('.tile'); if (t) focusTile(t) })
+
+render()
+</script>
+</body>
+</html>

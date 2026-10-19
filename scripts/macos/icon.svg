@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6f1e9"/>
+      <stop offset="1" stop-color="#e4dccf"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity=".22"/>
+    </filter>
+  </defs>
+  <!-- macOS 图标底板：824 见方，四周留边 -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)" filter="url(#shadow)"/>
+  <!-- 衣架 -->
+  <g fill="none" stroke="#2b2724" stroke-width="34" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M512 262c0-34 26-58 56-58s54 24 54 54c0 28-18 44-42 56-22 11-34 24-34 48v20"/>
+    <path d="M546 382L248 540c-22 12-14 44 11 44h506c25 0 33-32 11-44L546 382"/>
+  </g>
+  <!-- 合集：三张成图缩略图 -->
+  <g filter="url(#shadow)">
+    <rect x="262" y="636" width="150" height="196" rx="22" fill="#2b2724"/>
+    <rect x="437" y="636" width="150" height="196" rx="22" fill="#8a7a66"/>
+    <rect x="612" y="636" width="150" height="196" rx="22" fill="#c96f4a"/>
+  </g>
+</svg>

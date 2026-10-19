@@ -1,0 +1,21 @@
+.DS_Store
+node_modules/
+dist/
+coverage/
+.cache/
+*.log
+
+# Local credentials. Never commit these files or their symlinks.
+.env
+.env.*
+!.env.example
+local-secrets/
+
+# Local tutorial sources may contain private paths; docs/ keeps sanitized derivatives.
+教程素材/
+
+# Generated runs may contain user images, local paths, prompts, and costs.
+runs/
+*-tryon-output/
+# Local exports (PDF etc.) may embed private paths.
+output/

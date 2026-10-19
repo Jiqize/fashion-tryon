@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="a">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tryon Studio 样稿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ---------- 三套主题：只换变量，结构不变 ---------- */
+:root {
+  --serif: 'Instrument Serif', 'Songti SC', 'Noto Serif SC', serif;
+  --sans: 'Inter', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  --bar-h: 56px;
+  --keys-h: 40px;
+  --insp-w: 460px;
+  --head-w: 176px;
+  --ease: cubic-bezier(.2,.7,.2,1);
+}
+/* A 灯箱：中性深灰，图片是唯一主角 */
+[data-theme="a"] {
+  --bg: #1b1b1b; --panel: #212121; --well: #282828; --line: #303030; --line-2: #3d3d3d;
+  --text: #ecebe7; --muted: #8f8c86; --faint: #5c5a56;
+  --sel: #f4f1ea; --flag: #d4a553; --accent: #c8453a; --ok: #a3b99a;
+  --sku-font: var(--serif); --sku-size: 30px; --sku-track: .01em;
+  --tile-h: 196px; --row-py: 20px; --g-w: 120px; --radius: 2px;
+}
+/* B 画廊：暖灰纸感，衬线与红色细线 */
+[data-theme="b"] {
+  --bg: #ece9e3; --panel: #f4f2ed; --well: #e1ddd5; --line: #d8d2c8; --line-2: #c9c2b6;
+  --text: #1c1b19; --muted: #77716a; --faint: #aaa398;
+  --sel: #1c1b19; --flag: #a86f22; --accent: #a3281c; --ok: #4f6b45;
+  --sku-font: var(--serif); --sku-size: 40px; --sku-track: 0;
+  --tile-h: 214px; --row-py: 32px; --g-w: 136px; --radius: 0px;
+}
+/* C 工作台：浅中性灰，紧凑高密度 */
+[data-theme="c"] {
+  --bg: #f4f4f5; --panel: #ffffff; --well: #ebebed; --line: #e4e4e7; --line-2: #d4d4d8;
+  --text: #18181b; --muted: #71717a; --faint: #a1a1aa;
+  --sel: #2563eb; --flag: #d97706; --accent: #2563eb; --ok: #16a34a;
+  --sku-font: var(--mono); --sku-size: 17px; --sku-track: 0;
+  --tile-h: 150px; --row-py: 12px; --g-w: 96px; --radius: 6px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 13px/1.5 var(--sans); -webkit-font-smoothing: antialiased;
+  overflow: hidden; min-width: 1280px;
+  transition: background .3s var(--ease), color .3s var(--ease);
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+img { display: block; }
+.mono { font-family: var(--mono); font-feature-settings: 'zero' 0; }
+
+/* ---------- 顶栏 ---------- */
+.bar {
+  height: var(--bar-h); display: flex; align-items: center; gap: 28px;
+  padding: 0 24px; border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: baseline; gap: 14px; white-space: nowrap; }
+.brand b { font: italic 22px/1 var(--serif); font-weight: 400; letter-spacing: .01em; }
+[data-theme="c"] .brand b { font: 600 14px/1 var(--sans); font-style: normal; }
+.brand span { color: var(--muted); }
+.progress { flex: 1; display: flex; align-items: center; gap: 18px; min-width: 0; }
+.meter { display: flex; width: 220px; height: 4px; gap: 2px; flex: none; }
+.meter i { display: block; height: 100%; border-radius: 1px; transition: flex-grow .5s var(--ease); }
+.meter .m-done { background: var(--text); }
+.meter .m-review { background: var(--flag); }
+.meter .m-gen { background: repeating-linear-gradient(90deg, var(--muted) 0 3px, transparent 3px 5px); }
+.meter .m-queue { background: var(--line-2); }
+.meter .m-bad { background: var(--accent); }
+.counts { display: flex; gap: 16px; color: var(--muted); white-space: nowrap; }
+.counts b { color: var(--text); font: 500 13px var(--mono); margin-left: 4px; }
+.meta { color: var(--muted); white-space: nowrap; }
+.meta b { color: var(--text); font-weight: 500; }
+.themes { display: flex; border: 1px solid var(--line-2); border-radius: calc(var(--radius) + 2px); padding: 2px; }
+.themes button { padding: 4px 10px; color: var(--muted); border-radius: var(--radius); font-size: 12px; }
+.themes button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+
+/* ---------- 主体 ---------- */
+.layout { display: grid; grid-template-columns: 1fr var(--insp-w); height: calc(100vh - var(--bar-h) - var(--keys-h)); }
+.board { overflow-y: auto; scroll-behavior: smooth; }
+.board::-webkit-scrollbar, .insp::-webkit-scrollbar { width: 8px; }
+.board::-webkit-scrollbar-thumb, .insp::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 4px; }
+
+.set {
+  display: grid; grid-template-columns: var(--head-w) var(--g-w) 1fr; gap: 20px;
+  padding: var(--row-py) 24px; border-bottom: 1px solid var(--line);
+  position: relative; transition: background .2s var(--ease), padding .35s var(--ease);
+}
+.set.is-active { background: var(--panel); }
+.set.is-active::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--sel); }
+[data-theme="b"] .set.is-active::before { background: var(--accent); width: 1px; }
+
+.head { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sku { font: 400 var(--sku-size)/1 var(--sku-font); letter-spacing: var(--sku-track); }
+[data-theme="c"] .sku { font-weight: 500; }
+[data-theme="b"] .sku { padding-bottom: 10px; border-bottom: 1px solid var(--accent); align-self: flex-start; }
+.sub { color: var(--muted); }
+.state { margin-top: auto; display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+.state::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--faint); flex: none; }
+.st-review .state { color: var(--text); }
+.st-review .state::before { background: var(--flag); }
+.st-gen .state::before { background: var(--muted); animation: pulse 1.4s infinite; }
+.st-done .state::before { background: var(--ok); }
+.st-bad .state { color: var(--accent); }
+.st-bad .state::before { background: var(--accent); }
+.state kbd { margin-left: auto; }
+@keyframes pulse { 50% { opacity: .25; } }
+
+.garment { display: flex; flex-direction: column; gap: 6px; }
+.garment .frame { background: var(--well); aspect-ratio: 3/4; overflow: hidden; border-radius: var(--radius); }
+.garment img { width: 100%; height: 100%; object-fit: cover; }
+.cap { font-size: 11px; color: var(--muted); display: flex; gap: 8px; align-items: center; height: 16px; white-space: nowrap; overflow: hidden; }
+
+.tiles { display: grid; grid-template-columns: repeat(var(--n), minmax(0, calc(var(--tile-h) * .75))); gap: 10px; align-content: start; }
+.tile { display: flex; flex-direction: column; gap: 6px; text-align: left; outline: none; }
+.tile .frame {
+  position: relative; aspect-ratio: 3/4; background: var(--well); overflow: hidden; border-radius: var(--radius);
+  box-shadow: 0 0 0 0 var(--sel); transition: box-shadow .15s var(--ease);
+}
+.tile img { width: 100%; height: 100%; object-fit: cover; transition: opacity .3s var(--ease), filter .3s var(--ease); }
+.tile.is-sel .frame { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--sel); }
+[data-theme="b"] .tile.is-sel .frame { box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--accent); }
+.tile:hover:not(.is-sel) .frame { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--line-2); }
+.tile .cap .n { color: var(--text); }
+.tile .cap .v { color: var(--muted); }
+.tile .cap .tag { color: var(--flag); overflow: hidden; text-overflow: ellipsis; }
+.tile.is-excl img { opacity: .18; }
+.tile.is-excl .frame::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to top right, transparent calc(50% - .5px), var(--muted) 50%, transparent calc(50% + .5px));
+}
+.tile.is-excl .cap .tag { color: var(--muted); }
+/* 生成中与排队：用原姿势图做淡影占位，直观看出"这个姿势正在换装" */
+.tile.is-ghost img { opacity: .16; filter: grayscale(1); }
+.tile.is-regen img { opacity: .38; filter: grayscale(.6); }
+.prog { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--line); }
+.prog i { display: block; height: 100%; background: var(--text); transition: width .6s linear; }
+.tile.is-regen .prog i { background: var(--flag); }
+.ghost-label { position: absolute; inset: 0; display: grid; place-items: center; font: 500 11px var(--mono); color: var(--muted); letter-spacing: .08em; }
+
+/* 已交付的套收成一条 */
+.set.st-done { --tile-h: 76px; --g-w: 57px; padding-top: 12px; padding-bottom: 12px; }
+.set.st-done .sku { font-size: calc(var(--sku-size) * .62); padding-bottom: 0; border: 0; }
+.set.st-done .sub, .set.st-done .cap { display: none; }
+.set.st-done .state { margin-top: 2px; }
+.set.st-done .garment, .set.st-done .tiles { opacity: .78; }
+.path { font: 11px var(--mono); color: var(--muted); margin-top: 2px; }
+
+.note { grid-column: 2 / -1; align-self: center; color: var(--muted); display: flex; gap: 20px; align-items: center; }
+.note b { color: var(--accent); font-weight: 500; }
+
+/* ---------- 右侧检视 ---------- */
+.insp { border-left: 1px solid var(--line); overflow-y: auto; padding: 20px 22px 28px; display: flex; flex-direction: column; gap: 16px; }
+.insp > * { flex: none; }
+.insp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.insp-head .sku { font-size: calc(var(--sku-size) * .8); padding: 0; border: 0; }
+.insp-head .pos { color: var(--muted); }
+.big { background: var(--well); aspect-ratio: 3/4; overflow: hidden; border-radius: var(--radius); cursor: zoom-in; }
+.big img { width: 100%; height: 100%; object-fit: cover; }
+.vers { display: flex; gap: 6px; align-items: center; }
+.vers .lab { color: var(--muted); margin-right: 4px; }
+.chip { font: 12px var(--mono); padding: 3px 9px; border: 1px solid var(--line-2); border-radius: var(--radius); color: var(--muted); }
+.chip[aria-pressed="true"] { border-color: var(--text); color: var(--text); }
+.compare { display: grid; grid-template-columns: 1.75fr 1fr; gap: 10px; align-items: start; }
+.stack { display: flex; flex-direction: column; gap: 6px; }
+.stack .cap { margin-bottom: 4px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.big-s { display: block; background: var(--well); aspect-ratio: 3/4; overflow: hidden; border-radius: var(--radius); }
+.big-s img { width: 100%; height: 100%; object-fit: cover; }
+.pair .frame { background: var(--well); aspect-ratio: 3/4; overflow: hidden; border-radius: var(--radius); }
+.pair img { width: 100%; height: 100%; object-fit: cover; }
+.facts { border-top: 1px solid var(--line); padding-top: 14px; display: grid; grid-template-columns: 64px 1fr; gap: 6px 12px; color: var(--muted); }
+.facts dd { color: var(--text); }
+.acts { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; margin-top: auto; }
+.btn { padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--radius); display: flex; align-items: center; justify-content: space-between; gap: 8px; transition: background .15s, border-color .15s; }
+.btn:hover { border-color: var(--text); }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.primary kbd { color: var(--bg); border-color: color-mix(in srgb, var(--bg) 40%, transparent); }
+
+kbd { font: 11px/1 var(--mono); padding: 3px 5px; border: 1px solid var(--line-2); border-radius: 3px; color: var(--muted); }
+
+/* ---------- 底部快捷键 ---------- */
+.keys { height: var(--keys-h); border-top: 1px solid var(--line); display: flex; align-items: center; gap: 22px; padding: 0 24px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.keys span { display: flex; gap: 6px; align-items: center; }
+.keys .sp { flex: 1; }
+
+/* ---------- 重出标签弹层 ---------- */
+.pop {
+  position: fixed; z-index: 20; width: 300px; background: var(--panel); border: 1px solid var(--line-2);
+  border-radius: calc(var(--radius) + 2px); box-shadow: 0 18px 50px rgba(0,0,0,.28); padding: 14px;
+  opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity .16s var(--ease), transform .16s var(--ease);
+}
+.pop.open { opacity: 1; transform: none; pointer-events: auto; }
+.pop h4 { font: 500 13px var(--sans); margin-bottom: 10px; display: flex; justify-content: space-between; }
+.pop h4 span { color: var(--muted); font-weight: 400; }
+.tags { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.tags button { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: var(--radius); text-align: left; border: 1px solid transparent; }
+.tags button:hover { background: var(--well); }
+.tags button[aria-pressed="true"] { border-color: var(--flag); color: var(--flag); }
+.tags button[aria-pressed="true"] kbd { color: var(--flag); border-color: var(--flag); }
+.pop input { width: 100%; margin-top: 10px; padding: 8px 10px; background: var(--bg); border: 1px solid var(--line-2); border-radius: var(--radius); color: var(--text); font: inherit; outline: none; }
+.pop input:focus { border-color: var(--text); }
+.pop .foot { margin-top: 10px; display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; }
+
+/* ---------- 放大对照 ---------- */
+.loupe {
+  position: fixed; inset: 0; z-index: 30; background: var(--bg); display: grid; grid-template-rows: auto 1fr;
+  opacity: 0; pointer-events: none; transition: opacity .18s var(--ease);
+}
+.loupe.open { opacity: 1; pointer-events: auto; }
+.loupe header { display: flex; justify-content: space-between; align-items: baseline; padding: 18px 28px; border-bottom: 1px solid var(--line); }
+.loupe header .sku { font-size: calc(var(--sku-size) * .8); padding: 0; border: 0; }
+.loupe header span { color: var(--muted); }
+.cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding: 22px 28px; min-height: 0; }
+.col { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.col .frame { flex: 1; min-height: 0; background: var(--well); overflow: hidden; border-radius: var(--radius); cursor: zoom-in; }
+.col .frame.zoom { cursor: zoom-out; }
+.col img { width: 100%; height: 100%; object-fit: contain; transition: transform .25s var(--ease); }
+.col .frame.zoom img { transform: scale(2.4); }
+.col .cap { font-size: 12px; }
+
+/* ---------- 提示条 ---------- */
+.toast {
+  position: fixed; left: 50%; bottom: calc(var(--keys-h) + 18px); transform: translate(-50%, 10px); z-index: 40;
+  background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: calc(var(--radius) + 2px);
+  display: flex; gap: 14px; align-items: center; opacity: 0; pointer-events: none; transition: all .2s var(--ease);
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast .mono { opacity: .6; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand"><b>Tryon Studio</b><span>AW26 外套 · 第二批</span></div>
+  <div class="progress">
+    <div class="meter" id="meter"></div>
+    <div class="counts" id="counts"></div>
+  </div>
+  <div class="meta">并发 <b class="mono">5</b> · 已用 <b class="mono">¥18.4</b> / 预计 <b class="mono">¥46</b></div>
+  <div class="themes" role="group" aria-label="主题">
+    <button data-t="a">A 灯箱</button><button data-t="b">B 画廊</button><button data-t="c">C 工作台</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="board" id="board"></section>
+  <aside class="insp" id="insp"></aside>
+</main>
+
+<footer class="keys">
+  <span><kbd>↑</kbd><kbd>↓</kbd> 换套</span>
+  <span><kbd>←</kbd><kbd>→</kbd> 换图</span>
+  <span><kbd>Enter</kbd> 整套通过</span>
+  <span><kbd>R</kbd> 重出</span>
+  <span><kbd>X</kbd> 不交付</span>
+  <span><kbd>1</kbd>–<kbd>4</kbd> 切版本</span>
+  <span><kbd>Space</kbd> 放大对照</span>
+  <span><kbd>⌘Z</kbd> 撤销</span>
+  <span class="sp"></span>
+  <span><kbd>T</kbd> 切换主题（样稿用）</span>
+</footer>
+
+<div class="pop" id="pop">
+  <h4>重出这张 <span id="popWhat"></span></h4>
+  <div class="tags" id="tags"></div>
+  <input id="popNote" placeholder="补一句（可不填）">
+  <div class="foot"><span><kbd>Enter</kbd> 确认重出</span><span><kbd>Esc</kbd> 取消</span></div>
+</div>
+
+<div class="loupe" id="loupe"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- 样稿数据：前四套是 AI生成(2) 里的真实素材与成图，后两行是排队与素材不全的示意 ----------
+const img = n => `../../output/mockups/studio/img/${n}.jpg`
+const T = (r, m, extra) => ({ vers: [r, ...(extra || [])], m, cur: extra ? extra.length : 0, st: 'done', tags: [], excl: false, p: 0 })
+const SETS = [
+  { sku: 'EK52227', name: '深灰 · 粗花呢夹克', g: 'EK52227_g1', st: 'done',
+    items: [T('EK52227_r1', 'EK52227_m2'), T('EK52227_r2', 'EK52227_m1'), T('EK52227_r3', 'EK52227_m3')] },
+  { sku: 'EK52338', name: '灰 · 羊羔毛拼皮夹克', g: 'EK52338_g1', st: 'review',
+    items: [T('EK52338_r1', 'EK52338_m2'), T('EK52338_r2', 'EK52338_m1'), T('EK52338_r3', 'EK52338_m3'), T('EK52338_r4', 'EK52338_m4')] },
+  { sku: 'EK52449', name: '咖 · 马海毛围巾毛衣', g: 'EK52449_g1', st: 'review',
+    items: [T('EK52449_r1', 'EK52449_m2', ['EK52449_v2_r1']), T('EK52449_r2', 'EK52449_m4', ['EK52449_v2_r2']),
+            T('EK52449_r3', 'EK52449_m3', ['EK52449_v2_r3']), T('EK52449_r4', 'EK52449_m1', ['EK52449_v2_r4'])] },
+  { sku: 'ER52966', name: '咖 · 短款羽绒服', g: 'ER52966_g1', st: 'gen',
+    items: [T('ER52966_r1', 'ER52966_m1'), T('ER52966_r2', 'ER52966_m4'),
+            { ...T('ER52966_r3', 'ER52966_m3'), st: 'gen', p: .62 }, { ...T('ER52966_r4', 'ER52966_m2'), st: 'gen', p: .18 }] },
+  { sku: 'EK52603', name: '驼 · 双面呢大衣（示意）', g: 'EK52338_g2', st: 'queue', order: 1,
+    items: ['EK52338_m1', 'EK52338_m2', 'EK52338_m3', 'EK52338_m4', 'ER52966_m1', 'ER52966_m2'].map(m => ({ ...T(null, m), st: 'queue' })) },
+  { sku: 'EK52615', name: '黑 · 短款皮衣（示意）', g: 'EK52227_g2', st: 'bad', note: '一对一：服装 3 张 · 模特 4 张，数量不一致' },
+]
+const TAGS = ['颜色偏', '多了配饰', '少了单品', '下装被换', '姿势变了', '人物变了', '角色互换', '其他']
+const STATE_TEXT = { done: '已交付', review: '待判断', gen: '生成中', queue: '排队', bad: '素材不全' }
+
+let sel = { s: 1, i: 0 }
+let history = []
+const $ = id => document.getElementById(id)
+
+// ---------- 渲染 ----------
+function tileHTML(set, t, i, s) {
+  const isSel = sel.s === s && sel.i === i && set.st !== 'done'
+  const src = t.st === 'queue' || (t.st === 'gen' && !t.tags.length) ? img(t.m) : img(t.vers[t.cur])
+  const cls = ['tile', isSel && 'is-sel', t.excl && 'is-excl',
+    (t.st === 'queue' || (t.st === 'gen' && !t.tags.length)) && 'is-ghost', t.st === 'gen' && t.tags.length && 'is-regen'].filter(Boolean).join(' ')
+  let label = ''
+  if (t.st === 'queue') label = '<span class="ghost-label">排队</span>'
+  let prog = t.st === 'gen' ? `<span class="prog"><i style="width:${Math.round(t.p * 100)}%"></i></span>` : ''
+  let tag = ''
+  if (t.excl) tag = '<span class="tag">不交付</span>'
+  else if (t.st === 'gen' && t.tags.length) tag = `<span class="tag">重出中 · ${t.tags.join('、')}</span>`
+  else if (t.st === 'gen') tag = `<span class="tag" style="color:var(--muted)">生成中 ${Math.round(t.p * 100)}%</span>`
+  const v = t.vers.length > 1 ? `<span class="v mono">v${t.cur + 1}/${t.vers.length}</span>` : ''
+  return `<button class="${cls}" data-s="${s}" data-i="${i}">
+    <span class="frame"><img src="${src}" alt="" loading="lazy">${label}${prog}</span>
+    <span class="cap"><span class="n mono">${String(i + 1).padStart(2, '0')}</span>${v}${tag}</span>
+  </button>`
+}
+
+function setHTML(set, s) {
+  const active = sel.s === s
+  const n = set.items ? set.items.length : 0
+  const extra = set.st === 'done' ? `<div class="path">→ 成图/${set.sku}/</div>` : ''
+  const hint = set.st === 'review' && active ? '<kbd>Enter</kbd>' : ''
+  const stateText = set.st === 'queue' ? `排队 · 第 ${set.order} 位` : STATE_TEXT[set.st]
+  const head = `<div class="head">
+      <div class="sku">${set.sku}</div><div class="sub">${set.name}</div>
+      <div class="state">${stateText}${hint}</div>${extra}
+    </div>`
+  const garment = `<div class="garment"><span class="frame"><img src="${img(set.g)}" alt=""></span><span class="cap">服装裁后图</span></div>`
+  if (set.st === 'bad') {
+    return `<article class="set st-bad" data-s="${s}">${head}<div class="note"><b>${set.note}</b><span>补齐后自动加入队列，其他套不受影响</span></div></article>`
+  }
+  return `<article class="set st-${set.st}${active ? ' is-active' : ''}" data-s="${s}">
+    ${head}${garment}
+    <div class="tiles" style="--n:${n}">${set.items.map((t, i) => tileHTML(set, t, i, s)).join('')}</div>
+  </article>`
+}
+
+function renderBoard() {
+  $('board').innerHTML = SETS.map(setHTML).join('')
+  const c = { done: 0, review: 0, gen: 0, queue: 0, bad: 0 }
+  SETS.forEach(x => c[x.st]++)
+  $('meter').innerHTML = ['done', 'review', 'gen', 'queue', 'bad'].map(k => `<i class="m-${k === 'bad' ? 'bad' : k}" style="flex-grow:${c[k]}"></i>`).join('')
+  $('counts').innerHTML = `<span>已交付<b>${c.done}</b></span><span>待判断<b>${c.review}</b></span><span>生成中<b>${c.gen}</b></span><span>排队<b>${c.queue}</b></span><span>不全<b>${c.bad}</b></span>`
+}
+
+function renderInsp() {
+  const set = SETS[sel.s]
+  if (!set.items || set.st === 'done') {
+    $('insp').innerHTML = `<div class="insp-head"><div class="sku">${set.sku}</div></div><p style="color:var(--muted)">${set.st === 'done' ? '这一套已交付到 成图/' + set.sku + '/。按 ⌘Z 可撤回重新判断。' : set.note || ''}</p>`
+    return
+  }
+  const t = set.items[sel.i]
+  const showGhost = t.st === 'queue' || (t.st === 'gen' && !t.tags.length)
+  const big = showGhost ? img(t.m) : img(t.vers[t.cur])
+  const vers = t.vers.length > 1
+    ? `<div class="vers"><span class="lab">版本</span>${t.vers.map((_, k) => `<button class="chip" data-v="${k}" aria-pressed="${k === t.cur}">v${k + 1}</button>`).join('')}<span class="lab" style="margin-left:auto">${t.cur === t.vers.length - 1 ? '最新' : '历史版本'}</span></div>` : ''
+  const status = t.excl ? '不交付' : t.st === 'gen' ? (t.tags.length ? '重出中' : '生成中') : t.st === 'queue' ? '排队' : '待判断 · 默认通过'
+  $('insp').innerHTML = `
+    <div class="insp-head"><div class="sku">${set.sku}</div><span class="pos mono">${String(sel.i + 1).padStart(2, '0')} / ${String(set.items.length).padStart(2, '0')}</span></div>
+    <div class="compare">
+      <div class="stack"><div class="big" id="bigImg"><img src="${big}" alt="" style="${showGhost ? 'opacity:.2;filter:grayscale(1)' : ''}"></div><span class="cap">成图${t.vers.length > 1 ? ' v' + (t.cur + 1) : ''}</span></div>
+      <div class="stack pair-v">
+        <span class="frame big-s"><img src="${img(set.g)}" alt=""></span><span class="cap">服装裁后图</span>
+        <span class="frame big-s"><img src="${img(t.m)}" alt=""></span><span class="cap">模特原图</span>
+      </div>
+    </div>
+    ${vers}
+    <dl class="facts">
+      <dt>状态</dt><dd>${status}</dd>
+      <dt>模式</dt><dd>固定服装 · 全身</dd>
+      ${t.tags.length || t.vers.length > 1 ? `<dt>重出</dt><dd>${t.tags.length ? t.tags.join('、') : 'v2 由新提示词重出'}</dd>` : ''}
+    </dl>
+    <div class="acts">
+      <button class="btn primary" data-act="pass">整套通过 <kbd>Enter</kbd></button>
+      <button class="btn" data-act="regen">重出 <kbd>R</kbd></button>
+      <button class="btn" data-act="excl">不交付 <kbd>X</kbd></button>
+    </div>`
+}
+
+function render() { renderBoard(); renderInsp(); scrollToActive() }
+function scrollToActive() {
+  const el = document.querySelector('.set.is-active') || document.querySelector(`.set[data-s="${sel.s}"]`)
+  if (!el) return
+  const b = $('board'), top = el.offsetTop - b.offsetTop
+  if (top < b.scrollTop || top + el.offsetHeight > b.scrollTop + b.clientHeight) b.scrollTop = top - 12
+}
+
+// ---------- 操作 ----------
+const snap = () => history.push(JSON.stringify({ SETS, sel }))
+function undo() {
+  const last = history.pop(); if (!last) return toast('没有可撤销的操作')
+  const o = JSON.parse(last); SETS.splice(0, SETS.length, ...o.SETS); sel = o.sel; render(); toast('已撤销')
+}
+function toast(msg, sub) {
+  const el = $('toast'); el.innerHTML = `<span>${msg}</span>${sub ? `<span class="mono">${sub}</span>` : ''}`
+  el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600)
+}
+function moveSet(d) {
+  let s = sel.s
+  do { s += d } while (s >= 0 && s < SETS.length && false)
+  if (s < 0 || s >= SETS.length) return
+  sel = { s, i: Math.min(sel.i, (SETS[s].items || [1]).length - 1) }; render()
+}
+function moveTile(d) {
+  const n = (SETS[sel.s].items || []).length; if (!n) return
+  sel.i = (sel.i + d + n) % n; render()
+}
+function nextReview(from) {
+  for (let k = 1; k <= SETS.length; k++) { const s = (from + k) % SETS.length; if (SETS[s].st === 'review') return s }
+  return -1
+}
+function pass() {
+  const set = SETS[sel.s]
+  if (set.st !== 'review') return toast(set.st === 'gen' ? '这套还在生成，完成后再判断' : '这一套现在不能交付')
+  if (set.items.some(t => t.st === 'gen')) return toast('还有重出中的图，完成后再交付')
+  snap()
+  set.st = 'done'
+  const kept = set.items.filter(t => !t.excl).length
+  toast(`${set.sku} 已交付 ${kept} 张`, `→ 成图/${set.sku}/   ⌘Z 撤销`)
+  const nx = nextReview(sel.s)
+  sel = nx >= 0 ? { s: nx, i: 0 } : sel
+  render()
+}
+function toggleExcl() {
+  const t = SETS[sel.s].items?.[sel.i]; if (!t || t.st !== 'done' || SETS[sel.s].st !== 'review') return
+  snap(); t.excl = !t.excl; render()
+}
+function setVer(k) {
+  const t = SETS[sel.s].items?.[sel.i]; if (!t || k >= t.vers.length) return
+  snap(); t.cur = k; render()
+}
+
+// 重出弹层
+let popTags = []
+function openPop() {
+  const set = SETS[sel.s], t = set.items?.[sel.i]
+  if (!t || t.st !== 'done' || set.st !== 'review') return
+  popTags = []
+  $('popWhat').textContent = `${set.sku} · ${String(sel.i + 1).padStart(2, '0')}`
+  renderTags(); $('popNote').value = ''
+  const r = document.querySelector('.tile.is-sel').getBoundingClientRect()
+  const pop = $('pop')
+  pop.style.left = Math.min(r.right + 12, innerWidth - 320) + 'px'
+  pop.style.top = Math.min(r.top, innerHeight - 280) + 'px'
+  pop.classList.add('open')
+}
+function renderTags() {
+  $('tags').innerHTML = TAGS.map((x, k) => `<button data-k="${k}" aria-pressed="${popTags.includes(x)}"><kbd>${k + 1}</kbd>${x}</button>`).join('')
+}
+const popOpen = () => $('pop').classList.contains('open')
+function closePop() { $('pop').classList.remove('open'); $('popNote').blur() }
+function toggleTag(k) { const x = TAGS[k]; popTags = popTags.includes(x) ? popTags.filter(y => y !== x) : [...popTags, x]; renderTags() }
+function confirmRegen() {
+  const set = SETS[sel.s], t = set.items[sel.i]
+  const note = $('popNote').value.trim()
+  const tags = popTags.length ? popTags : note ? ['其他'] : []
+  if (!tags.length) return toast('选一个问题标签，或写一句原因')
+  snap(); closePop()
+  Object.assign(t, { st: 'gen', tags, p: .04, excl: false })
+  toast(`${set.sku} · ${String(sel.i + 1).padStart(2, '0')} 已排队重出`, tags.join('、'))
+  render()
+  const s = sel.s, i = sel.i
+  const tick = setInterval(() => {
+    const cur = SETS[s].items[i]; if (cur.st !== 'gen') return clearInterval(tick)
+    cur.p = Math.min(1, cur.p + .11)
+    if (cur.p >= 1) {
+      clearInterval(tick)
+      // 样稿里没有真的生图：用这套里别的成图代表"新版本"
+      const alt = SETS[s].items[(i + 1) % SETS[s].items.length].vers[0]
+      cur.vers.push(alt); cur.cur = cur.vers.length - 1; cur.st = 'done'; cur.tags = []
+      toast(`${SETS[s].sku} · ${String(i + 1).padStart(2, '0')} 新版本 v${cur.vers.length} 已生成`, '旧版本保留，可按数字键切回')
+    }
+    render()
+  }, 700)
+}
+
+// 放大对照
+function openLoupe() {
+  const set = SETS[sel.s], t = set.items?.[sel.i]; if (!t || t.st === 'queue') return
+  const res = t.st === 'gen' && !t.tags.length ? null : img(t.vers[t.cur])
+  $('loupe').innerHTML = `<header><div class="sku">${set.sku} <span class="mono" style="font-size:14px">${String(sel.i + 1).padStart(2, '0')}</span></div><span>点击任意一张同步放大，移动鼠标同步平移 · <kbd>Space</kbd>/<kbd>Esc</kbd> 关闭</span></header>
+    <div class="cols">
+      <div class="col"><div class="frame"><img src="${img(set.g)}"></div><span class="cap">服装裁后图</span></div>
+      <div class="col"><div class="frame"><img src="${img(t.m)}"></div><span class="cap">模特原图</span></div>
+      <div class="col"><div class="frame">${res ? `<img src="${res}">` : ''}</div><span class="cap">成图 ${t.vers.length > 1 ? 'v' + (t.cur + 1) : ''}</span></div>
+    </div>`
+  $('loupe').classList.add('open')
+}
+const loupeOpen = () => $('loupe').classList.contains('open')
+function closeLoupe() { $('loupe').classList.remove('open') }
+$('loupe').addEventListener('click', e => {
+  const f = e.target.closest('.frame'); if (!f) return
+  document.querySelectorAll('.col .frame').forEach(x => x.classList.toggle('zoom'))
+})
+$('loupe').addEventListener('mousemove', e => {
+  const f = e.target.closest('.frame'); if (!f || !f.classList.contains('zoom')) return
+  const r = f.getBoundingClientRect()
+  const o = `${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`
+  document.querySelectorAll('.col img').forEach(x => x.style.transformOrigin = o)
+})
+
+// 主题
+function setTheme(t) {
+  document.documentElement.dataset.theme = t
+  document.querySelectorAll('.themes button').forEach(b => b.setAttribute('aria-pressed', b.dataset.t === t))
+  try { localStorage.setItem('tryon-studio-theme', t) } catch (e) {}
+}
+document.querySelectorAll('.themes button').forEach(b => b.onclick = () => setTheme(b.dataset.t))
+try { setTheme(localStorage.getItem('tryon-studio-theme') || 'a') } catch (e) { setTheme('a') }
+
+// ---------- 事件 ----------
+$('board').addEventListener('click', e => {
+  const tile = e.target.closest('.tile')
+  if (tile) { sel = { s: +tile.dataset.s, i: +tile.dataset.i }; render(); return }
+  const row = e.target.closest('.set'); if (row) { sel = { s: +row.dataset.s, i: 0 }; render() }
+})
+$('board').addEventListener('dblclick', e => { if (e.target.closest('.tile')) openLoupe() })
+$('insp').addEventListener('click', e => {
+  const v = e.target.closest('[data-v]'); if (v) return setVer(+v.dataset.v)
+  if (e.target.closest('#bigImg')) return openLoupe()
+  const a = e.target.closest('[data-act]'); if (!a) return
+  ;({ pass, regen: openPop, excl: toggleExcl })[a.dataset.act]()
+})
+$('tags').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) toggleTag(+b.dataset.k) })
+
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); return undo() }
+  if (popOpen()) {
+    if (e.key === 'Escape') return closePop()
+    if (e.key === 'Enter') { e.preventDefault(); return confirmRegen() }
+    if (document.activeElement === $('popNote')) return
+    if (/^[1-8]$/.test(e.key)) return toggleTag(+e.key - 1)
+    if (e.key === 'Tab') { e.preventDefault(); return $('popNote').focus() }
+    return
+  }
+  if (loupeOpen()) { if (e.key === 'Escape' || e.key === ' ') { e.preventDefault(); closeLoupe() } return }
+  const k = e.key
+  if (k === 'ArrowDown') { e.preventDefault(); moveSet(1) }
+  else if (k === 'ArrowUp') { e.preventDefault(); moveSet(-1) }
+  else if (k === 'ArrowRight') { e.preventDefault(); moveTile(1) }
+  else if (k === 'ArrowLeft') { e.preventDefault(); moveTile(-1) }
+  else if (k === 'Enter') { e.preventDefault(); pass() }
+  else if (k === 'r' || k === 'R') { e.preventDefault(); openPop() }
+  else if (k === 'x' || k === 'X') toggleExcl()
+  else if (k === ' ') { e.preventDefault(); openLoupe() }
+  else if (/^[1-4]$/.test(k)) setVer(+k - 1)
+  else if (k === 't' || k === 'T') { const o = ['a', 'b', 'c']; setTheme(o[(o.indexOf(document.documentElement.dataset.theme) + 1) % 3]) }
+})
+
+// 生成中的那一套：模拟进度推进，跑完自动转为待判断
+setInterval(() => {
+  const set = SETS[3]; if (set.st !== 'gen') return
+  set.items.forEach(t => { if (t.st === 'gen' && !t.tags.length) { t.p = Math.min(1, t.p + .04); if (t.p >= 1) t.st = 'done' } })
+  if (set.items.every(t => t.st === 'done')) { set.st = 'review'; toast(`${set.sku} 生成完成，可以判断了`) }
+  renderBoard()
+}, 900)
+
+render()
+</script>
+</body>
+</html>
